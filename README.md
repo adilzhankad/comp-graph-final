@@ -6,9 +6,9 @@ Final project for **Computer Graphics Fundamentals** (Astana IT University).
 Topic #11 from the *Final Project Topics* list, difficulty ★★ — *course material + one new simple technique*.
 The new technique is an **animated aurora shader**.
 
-Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile**: mountains built from a heightmap, a semi-transparent lake with strong specular highlights, curved aurora ribbons animated in a fragment shader, a starry skybox and a flickering campfire on the shore.
+Planned final scene: a real-time interactive landscape written in **C++** with **OpenGL 3.3 core profile**, featuring mountains built from a heightmap, a semi-transparent lake with strong specular highlights, curved animated aurora ribbons, a starry skybox and a flickering campfire on the shore. The first implementation milestone is described below; the complete course specification remains in this README.
 
-**Wow moment (end of the demo video):** the aurora brightens while the camera glides low over the lake.
+**Planned wow moment (end of the demo video):** the aurora brightens while the camera glides low over the lake.
 
 ---
 
@@ -30,12 +30,26 @@ Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile
 
 ## Status
 
-🚧 In development. Checkboxes below are updated as features land.
+The current milestone focuses on **terrain only**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces. The complete mountain-lake scene remains the final target.
+
+- CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
+- OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
+- A 513×513 grayscale heightmap covering **560×560 world units**, sampled onto a 128×128-cell mesh with **32,768 triangles**. The larger terrain covers sixteen times the area of the initial 140×140 landscape, while coarse 4.375-unit cells preserve the low-poly look.
+- Connected mountain ridges with uneven crests, elevated saddles, shared flanks and descending spurs. Irregularly spaced interior vertices and varied triangle diagonals preserve the low-poly shapes; each triangle has its own geometric normal for flat shading.
+- Muted green foothills, grey rock and pale summits, coloured per face by height and slope under ambient and directional light.
+- Smooth distance fog and an outer fog band blend the ground into the background before the mesh boundary.
+- Keyboard/mouse controls, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
+
+![Current low-poly terrain rendered by the application](docs/preview.png)
+
+This is an actual 1280×720 application capture. Validation results are recorded in [docs/VALIDATION.md](docs/VALIDATION.md).
+
+The lake, aurora and prop prototype files are retained for later work, but are excluded from the current application build and scene. No water, aurora or campfire is rendered in this milestone. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
 
 | Milestone | What we show | Status |
 |---|---|---|
 | Team & topic registration | Topic name + every member in MS Teams | ☐ |
-| Week 7 progress check | Window, camera, terrain, first objects | ☐ |
+| Week 7 progress check | Window, camera, terrain, first objects | Terrain art pass in progress; other objects deferred |
 | Week 8 progress check | Lighting, textures, lake, aurora, interaction | ☐ |
 | Week 9 progress check | Almost finished project | ☐ |
 | Final submission (3 days before defense) | Tag `v1.0`, report PDF, slides, demo video | ☐ |
@@ -46,7 +60,7 @@ Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile
 
 ### Core (required)
 
-- [ ] **Mountain terrain from a heightmap** — grayscale image → grid mesh, heights from pixel brightness, normals from finite differences, height/slope-based texturing (grass → rock → snow).
+- [ ] **Mountain terrain from a heightmap** — grayscale image → grid mesh, heights from pixel brightness, height/slope-based texturing (grass → rock → snow). The current low-poly mesh uses face normals; finite-difference normals remain available for height-field queries.
 - [ ] **Lake** — semi-transparent plane (alpha blending, drawn after opaque geometry) with strong Blinn-Phong specular highlights from the moon and the campfire.
 - [ ] **Aurora** — several curved quad ribbons with an animated colour shader (scrolling noise + sine waves, green → teal → purple gradient, additive blending).
 - [ ] **Starry skybox** — night cubemap.
@@ -61,7 +75,7 @@ Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile
 ### Extra polish (only if time allows)
 
 - [ ] Aurora light reflected in the lake as a coloured tint.
-- [ ] Distance fog / mountain haze.
+- [x] Distance fog / mountain haze, including an outer band that obscures the terrain boundary.
 - [ ] Campfire spark particles.
 - [ ] Dear ImGui panel with all scene parameters.
 
@@ -69,22 +83,22 @@ Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile
 
 ## How the requirements R1–R8 are met
 
-| # | Requirement | How this project meets it |
-|---|---|---|
-| R1 | Modern pipeline | OpenGL 3.3 core profile only; every mesh uses VAO/VBO/EBO; our own `.vert`/`.frag` shaders for each object type; no fixed-function calls. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora ribbons, skybox, campfire (logs + stones), pine trees, tent, rowing boat with lantern. |
-| R3 | Transformation pipeline + hierarchy | Own model/view/projection matrices (GLM). Scene graph with parent–child nodes: **boat → lantern** (the lantern and its light drift with the boat), **campfire → logs/stones**. |
-| R4 | Lighting / shading | Per-fragment **Blinn-Phong** (ambient + diffuse + specular). Lights: moon (directional, can be moved across the sky), campfire (point, flickers, toggle), boat lantern (point, moves with the boat). |
-| R5 | Texturing or equivalent | Terrain, logs and tent textures with correct UVs and mipmapping (`GL_LINEAR_MIPMAP_LINEAR`); night **cubemap skybox**; **procedural** aurora colour in the fragment shader. |
-| R6 | Interaction | FPS/fly camera with keyboard + mouse; plus scene interactions: aurora intensity/speed, campfire on/off, moon position, time speed, wireframe toggle (see [Controls](#controls)). |
-| R7 | Real-time performance | Target 60+ FPS at 1280×720; FPS counter shown in the window title (and in the ImGui overlay if enabled). |
-| R8 | Build | Same setup as the course assignments; exact steps in [Build and run](#build-and-run). |
+| # | Requirement | Final target | Current terrain milestone |
+|---|---|---|---|
+| R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Only terrain is active; additional objects are deferred. |
+| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices and reusable scene-node code; no parent–child object group in the active scene yet. |
+| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Flat terrain faces with ambient and directional diffuse lighting; point lights and final material shading are deferred. |
+| R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input and per-face terrain colours; textures, cubemap and aurora integration remain. |
+| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, wireframe and mouse capture. Other scene controls are inactive. |
+| R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
+| R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies and build/test commands; platform validation must be recorded. |
 
 ---
 
 ## Controls
 
-> Final key bindings are fixed before `v1.0`; the on-screen help (`H`) always shows the current list.
+These controls apply to the current terrain scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
 
 | Key / input | Action |
 |---|---|
@@ -93,30 +107,29 @@ Real-time interactive 3D scene written in **C++** with **OpenGL 3.3 core profile
 | Mouse | Look around |
 | Mouse wheel | Zoom (field of view) |
 | `Left Shift` | Move faster |
-| `G` | Start/stop the cinematic glide over the lake |
-| `↑` / `↓` | Aurora intensity up / down |
-| `←` / `→` | Aurora animation speed down / up |
-| `F` | Campfire on / off |
-| `M` + mouse drag / `[` `]` | Move the moon across the sky |
-| `R` | Lake reflection on / off (stretch) |
-| `1` / `2` / `3` | Calm / gentle / windy lake waves (stretch) |
-| `T` | Pause / resume time |
+| `[` / `]` | Rotate the directional light to inspect mountain faces |
 | `P` | Wireframe on / off |
-| `H` | Show / hide on-screen help |
-| `Tab` | Release / capture the mouse (for the ImGui panel) |
+| `H` | Print current controls to the terminal; on-screen help is planned |
+| `Tab` | Release / capture the mouse |
 | `Esc` | Quit |
+
+Planned bindings for later milestones are `G` for cinematic glide, arrow keys for aurora intensity/speed, `F` for the campfire, `T` for time pause, `M` + mouse drag for the moon, `R` for reflections, and `1`/`2`/`3` for wave presets. They have no action in the current terrain scene. On-screen help is also deferred.
 
 ---
 
 ## Build and run
 
-Language: C++17. Libraries: **GLFW** (window/input), **GLAD** (loader), **GLM** (math), **stb_image** (images), optionally **Dear ImGui** (UI). All third-party code lives in `external/` and is built together with the project — **nothing has to be installed on the TA machine except a C++ compiler and CMake**.
+Language: C++17. Libraries: **GLFW** (window/input), **GLAD** (loader), **GLM** (math), and **stb_image** (heightmap/image decoding). Their source lives in `external/`; CMake compiles GLFW and GLAD with the application. Versions and licenses are recorded in [external/README.md](external/README.md) and [CREDITS.md](CREDITS.md). Dear ImGui is an optional future addition.
+
+Normal builds do not download dependencies or need Python. Debug and Release each build their own matching libraries, avoiding the runtime mismatch caused by sharing a precompiled Windows `glfw3.lib`.
 
 ### Requirements
 
 - CMake ≥ 3.16
 - A C++17 compiler: MSVC (Visual Studio 2019+), Clang (Xcode CLT on macOS) or GCC 9+
 - GPU and driver with OpenGL 3.3 support
+- Windows: install Visual Studio's **Desktop development with C++** workload and a Windows SDK.
+- Linux: install the GLFW window-system development packages. On Debian/Ubuntu, `sudo apt install build-essential cmake xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols` supports the default X11/Wayland build. For X11 only, configure with `-DGLFW_BUILD_WAYLAND=OFF` and install `xorg-dev`.
 
 ### Steps
 
@@ -127,7 +140,14 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
-Run from the repository root so that `shaders/` and `assets/` are found:
+For Visual Studio 2022, selecting the toolchain and architecture explicitly is recommended on the first configure:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+```
+
+Use a separate build directory when changing generators or architecture. Run the executable below. CMake copies `shaders/` and `assets/` beside it, so the working directory does not need to be the repository root:
 
 ```bash
 # macOS / Linux
@@ -137,7 +157,28 @@ Run from the repository root so that `shaders/` and `assets/` are found:
 build\Release\MountainLakeAurora.exe
 ```
 
-**Visual Studio / CLion:** open the folder as a CMake project, choose the `MountainLakeAurora` target, set the working directory to the repository root and run.
+**Visual Studio / CLion:** open the folder as a CMake project, choose the `MountainLakeAurora` target and run. Rebuild after editing shaders or assets to refresh the executable's resource copies. To load resources from a particular source tree, pass `--resources <directory-containing-shaders-and-assets>`.
+
+### Validation
+
+```bash
+cmake -E chdir build ctest -C Release --output-on-failure
+```
+
+On CMake 3.20 or newer, `ctest --test-dir build -C Release --output-on-failure` is equivalent.
+
+The CPU tests check camera motion and matrices, transform-hierarchy propagation, heightmap interpolation, normals, input validation and starter asset decoding without a graphics context. Separately, exercise actual context creation, shader compilation, resource loading and drawing with:
+
+```bash
+# Windows
+build\Release\MountainLakeAurora.exe --smoke-test
+# macOS / Linux
+./build/MountainLakeAurora --smoke-test
+```
+
+The smoke test renders four deterministic frames in a hidden window, checks OpenGL errors and rejects an unexpectedly uniform/dark frame. It returns a nonzero exit code on failure and still requires a working OpenGL driver and display system. To capture the final test frame for visual review, add `--capture smoke.ppm`. The smoke test does not measure FPS or verify keyboard/mouse interaction.
+
+The [build workflow](.github/workflows/build.yml) configures Windows, macOS and Linux builds and CPU tests, plus an Xvfb/Mesa graphics smoke test on Linux. These jobs run after the changes are pushed to GitHub; their existence alone is not evidence of a passing platform build. Record local results and CI outcomes before submission.
 
 > Before submission: check that a **fresh clone** builds with exactly these steps on Windows and macOS.
 
@@ -149,40 +190,46 @@ build\Release\MountainLakeAurora.exe
 comp-graph-final/
 ├── CMakeLists.txt
 ├── README.md
-├── CREDITS.md            # every third-party asset / snippet with author, link, license
+├── CREDITS.md            # source/asset provenance and licenses
+├── .github/workflows/build.yml # platform build and test jobs
+├── docs/ROADMAP.md       # requirement status and ordered follow-up work
 ├── src/
 │   ├── main.cpp          # window, main loop, input dispatch
 │   ├── Shader.h/.cpp     # load, compile, link, set uniforms
-│   ├── Mesh.h/.cpp       # VAO/VBO/EBO wrapper, draw / draw instanced
-│   ├── Texture.h/.cpp    # 2D textures with mipmaps, cubemaps (stb_image)
-│   ├── Camera.h/.cpp     # FPS camera, frame-rate independent movement, glide path
+│   ├── Mesh.h/.cpp       # owning VAO/VBO/EBO wrapper, indexed draw
+│   ├── Camera.h/.cpp     # fly camera, frame-rate independent movement
 │   ├── SceneNode.h/.cpp  # scene graph: local transform, children, world matrix
-│   ├── Terrain.h/.cpp    # heightmap → mesh, normals, height lookup
-│   ├── Lake.h/.cpp       # water plane, waves, reflection framebuffer
-│   ├── Aurora.h/.cpp     # curved ribbon geometry + animation parameters
-│   ├── Lights.h/.cpp     # moon, campfire, lantern; uniform upload
-│   └── Primitives.h/.cpp # cube, cylinder, cone, sphere, plane generators
+│   ├── Scene.h/.cpp      # current terrain-only scene and directional light
+│   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
+│   ├── ImageLoader.cpp   # the single stb_image implementation translation unit
+│   ├── Terrain.h/.cpp    # coarse irregular grid and flat triangle normals
+│   ├── Lake.h/.cpp       # deferred prototype, excluded from the application build
+│   ├── Aurora.h/.cpp     # deferred prototype, excluded from the application build
+│   └── Primitives.h/.cpp # deferred prop geometry, excluded from the application build
 ├── shaders/
 │   ├── terrain.vert / terrain.frag
-│   ├── lake.vert    / lake.frag
-│   ├── aurora.vert  / aurora.frag
-│   ├── skybox.vert  / skybox.frag
-│   ├── object.vert  / object.frag     # Blinn-Phong for props
-│   └── tree.vert    / tree.frag       # instanced pine trees
+│   ├── lake.vert    / lake.frag      # deferred prototype
+│   ├── aurora.vert  / aurora.frag    # deferred prototype
+│   └── object.vert  / object.frag    # deferred prop prototype
 ├── assets/
-│   ├── heightmaps/
-│   ├── textures/
-│   └── skybox/
-└── external/             # glfw, glad, glm, stb_image, imgui
+│   └── heightmaps/       # bundled reproducible starter heightmap
+├── scripts/
+│   └── generate_heightmap.py
+├── tests/               # CPU behaviour tests
+└── external/            # bundled glfw, glad, glm, stb_image sources + versions.json
 ```
 
-Rule of thumb for D2: one class per concept, no file over ~500 lines, all shaders in separate `.vert`/`.frag` files.
+Planned additions include `Texture`, `Skybox`, `Lights`, instanced tree rendering, `assets/textures/`, `assets/skybox/`, and the corresponding shaders. Add these as working modules, following [the roadmap](docs/ROADMAP.md).
+
+Rule of thumb for D2: one class per concept, no application source file over ~500 lines, all shaders in separate `.vert`/`.frag` files. Third-party source is kept separate and retains upstream formatting.
 
 ---
 
 ## Technical notes
 
-### Render order per frame
+The active renderer currently performs one opaque terrain pass with flat lighting. The terrain section below describes this implementation; the other scene sections preserve the **planned final design** for later milestones.
+
+### Planned final render order per frame
 
 1. *(stretch)* Reflection pass: camera mirrored below the water plane, clip plane `y > waterLevel`, render terrain + trees + campfire + skybox + aurora into a framebuffer.
 2. Opaque pass: terrain, trees, campfire, tent, boat.
@@ -193,15 +240,25 @@ Rule of thumb for D2: one class per concept, no file over ~500 lines, all shader
 
 ### Terrain from a heightmap
 
-Grid of `W × H` vertices; vertex `(i, j)` gets height `h = heightScale · I(i, j)` where `I` is the pixel brightness in `[0, 1]`. Normal by central differences:
+The current asset contains 513×513 grayscale samples spanning 560×560 world units. Heights are decoded as `heightOffset + heightScale · I`, where `I` is pixel brightness in `[0, 1]`. The renderer samples this field onto 128×128 cells, with deterministic interior vertex jitter and varied diagonals, producing 32,768 triangles. Each cell remains roughly 4.375 units wide, so the expanded area keeps large, readable facets. The heightmap generator forms mountains along connected ridge lines: crest heights vary through peaks and saddles, while asymmetric flanks and descending spurs connect them into long ranges. Several overlapping ranges provide depth beyond the open central valley.
+
+Vertices are duplicated between triangles, with one geometric normal shared by all three vertices of each face:
+
+```
+n_face = normalize(cross(p1 - p0, p2 - p0))
+```
+
+The terrain shaders use `flat` interpolation for the normal and material anchor, preserving constant colour and lighting across each face. Height/slope colour bands, subtle per-face variation and matte directional lighting make the facets readable. Texture integration is a later course milestone and should preserve this low-poly art direction.
+
+Fog uses interpolated world position so the atmospheric transition stays smooth across triangle edges. Distance fog fades in from 95 to 230 units from the camera. A separate outer band fades from 205 to 260 units along either horizontal world axis; it reaches the background colour before the boundary at ±280. This outer band remains in place when the camera approaches the edge, while the central mountain shapes retain their flat shading.
+
+The CPU `Heightmap::normalAt` helper still uses finite differences for slope queries and tests. It does not supply the rendered terrain normals. The original smooth-grid reference is:
 
 ```
 n = normalize( ( h(i-1,j) - h(i+1,j),  2·cellSize,  h(i,j-1) - h(i,j+1) ) )
 ```
 
-Fragment colour blends grass / rock / snow textures by height and by slope (`1 - n.y`).
-
-### Lighting — Blinn-Phong
+### Planned material lighting — Blinn-Phong
 
 ```
 L_out = k_a·I_a + Σ_lights att · ( k_d·max(n·l, 0) + k_s·max(n·h, 0)^shininess ) · I_light
@@ -281,3 +338,4 @@ Required by the course rules; kept up to date during the project and copied into
 | Tool | What it was used for | What we changed / checked |
 |---|---|---|
 | Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. | _Team reviewed and edited the text; fill in further uses here._ |
+| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the active milestone to terrain only with sharp low-poly geometry and flat shading. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must review the terrain appearance, exercise the controls and explain the implementation at the defense. |
