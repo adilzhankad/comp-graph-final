@@ -7,6 +7,8 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 out vec3 vPosition;
 void main() {
+    // The surface stays flat: the fragment shader derives the wave normal from
+    // the world position, so no displacement or interpolated normal is needed.
     vec4 world = uModel * vec4(aPosition, 1.0);
     vPosition = world.xyz;
     gl_Position = uProjection * uView * world;

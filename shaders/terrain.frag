@@ -5,6 +5,7 @@ in vec3 vPosition;
 uniform vec3 uCameraPosition;
 uniform vec3 uLightDirection;
 uniform float uTerrainHalfSize;
+uniform vec3 uFogColor;
 out vec4 fragColor;
 
 void main() {
@@ -36,6 +37,6 @@ void main() {
     float edge = max(abs(vPosition.x), abs(vPosition.z));
     float edgeFog = smoothstep(uTerrainHalfSize - 75.0, uTerrainHalfSize - 20.0, edge);
     float fog = 1.0 - (1.0 - distanceFog) * (1.0 - edgeFog);
-    color = mix(color, vec3(0.18, 0.25, 0.29), fog);
+    color = mix(color, uFogColor, fog);
     fragColor = vec4(color, 1.0);
 }

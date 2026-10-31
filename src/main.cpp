@@ -26,8 +26,8 @@ namespace fs = std::filesystem;
 void printHelp() {
     std::cout << "\nMountain Lake & Aurora - low-poly terrain\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
-        << "Tab capture/release mouse | [ / ] light direction | P wireframe | H console help\n"
-        << "Esc quit. Current scene: terrain only.\n"
+        << "Tab capture/release mouse | [ / ] light direction | T pause waves\n"
+        << "P wireframe | H console help | Esc quit. Current scene: terrain and lake.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
@@ -120,6 +120,7 @@ struct Input {
     mla::Camera camera;
     mla::SceneSettings scene;
     bool captured = true;
+    bool paused = false;
     bool firstMouse = true;
     double lastX = 0, lastY = 0;
 };
@@ -150,6 +151,7 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         switch (key) {
         case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
+        case GLFW_KEY_T: state.paused = !state.paused; break;
         case GLFW_KEY_H: printHelp(); break;
         case GLFW_KEY_TAB:
             state.captured = !state.captured; state.firstMouse = true;
@@ -201,6 +203,7 @@ int run(const Options& options, const char* executable) {
     Input state;
     attachInput(window.handle, state, options.smoke);
     mla::Scene scene(resources);
+    std::cout << "Lake surface: " << scene.lake().triangleCount() << " triangles\n";
     checkGraphicsErrors();
     printHelp();
     double previous = glfwGetTime(), titleTime = previous;
@@ -218,8 +221,11 @@ int run(const Options& options, const char* executable) {
             glfwWaitEventsTimeout(.05);
             continue;
         }
+        // A fixed step keeps the smoke test's frames reproducible.
+        state.scene.time += options.smoke ? 1.0f / 60.0f : (state.paused ? 0.0f : dt);
         glViewport(0, 0, width, height);
-        glClearColor(.18f, .25f, .29f, 1.0f);
+        const auto background = mla::Scene::background();
+        glClearColor(background.r, background.g, background.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         scene.render(state.camera, static_cast<float>(width) / height, state.scene);
         ++frames; ++titleFrames;
@@ -247,7 +253,7 @@ int run(const Options& options, const char* executable) {
         if (now - titleTime >= .5) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
-                  << titleFrames / (now - titleTime) << " FPS | Low-poly terrain";
+                  << titleFrames / (now - titleTime) << " FPS | Low-poly terrain and lake";
             glfwSetWindowTitle(window.handle, title.str().c_str());
             titleTime = now; titleFrames = 0;
         }

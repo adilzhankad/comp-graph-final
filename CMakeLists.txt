@@ -28,7 +28,7 @@ target_link_libraries(mla_core PUBLIC mla_glm mla_image)
 
 add_executable(MountainLakeAurora
     src/main.cpp src/Shader.cpp src/Mesh.cpp src/Terrain.cpp
-    src/Scene.cpp)
+    src/Lake.cpp src/Scene.cpp)
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
 target_compile_definitions(MountainLakeAurora PRIVATE GLFW_INCLUDE_NONE NOMINMAX)
 set_property(TARGET MountainLakeAurora PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MountainLakeAurora>")
