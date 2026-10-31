@@ -17,8 +17,9 @@ The project builds GLFW and generated GLAD source locally; no precompiled librar
 
 | Item | Origin | Notes |
 |---|---|---|
-| Starter grayscale heightmap | Generated for this project by `scripts/generate_heightmap.py` | Deterministic mathematical terrain; source recipe is included. No external photograph or heightmap was used. |
+| Starter grayscale heightmap | Generated for this project by `scripts/generate_heightmap.py` | Deterministic mathematical terrain and lake basin; source recipe is included. No external photograph or heightmap was used. |
 | Initial terrain, lake, aurora and prop shaders | Written for this project with Codex assistance | Review and tuning by the team are required; disclose assistance in the report. |
+| Lake basin, water surface and `shaders/lake.*` | Written for this project with Claude assistance | Basin carved by `scripts/generate_heightmap.py`; wave normals, Schlick fresnel and Blinn-Phong are standard formulations reproduced from the course material, not copied code. Review and tuning by the team are required; disclose assistance in the report. |
 | Initial scene geometry and application modules | Written for this project with Codex assistance | Basic mathematical geometry; no imported model assets in the first milestone. |
 
 No skybox, grass/rock/snow texture pack, tent texture or third-party model has been included in this milestone. Add author, source link, license and any modifications here when selecting those assets. If course or LearnOpenGL code is adapted later, cite the exact source here and next to the adapted code.
