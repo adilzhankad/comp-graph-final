@@ -9,8 +9,9 @@ namespace mla {
 // CPU height field shared by mesh generation, prop placement, and tests.
 class Heightmap {
 public:
+    // The defaults decode the committed asset: see scripts/generate_heightmap.py.
     Heightmap(const std::filesystem::path& path, float worldSize = 560.0f,
-              float heightScale = 32.0f, float heightOffset = -4.0f);
+              float heightScale = 38.0f, float heightOffset = -10.0f);
     Heightmap(int width, int depth, std::vector<float> heights, float worldSize);
 
     int width() const { return width_; }

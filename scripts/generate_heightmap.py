@@ -1,14 +1,20 @@
 ﻿"""Generate connected, angular mountain ranges (Python standard library only).
 
 The committed 513-square PGM covers 560 world units and encodes heights from
--4 to 28. The renderer supplies the coarse triangles and flat face normals.
+-10 to 28. The renderer supplies the coarse triangles and flat face normals.
 Python is needed only when deliberately regenerating this source asset.
+
+The central valley holds a carved lake basin. The renderer floods it to a
+fixed water level and takes the shoreline from the terrain crossing, so the
+basin outline below is the only description of the lake shape.
 """
-from math import sqrt
+from math import atan2, cos, sin, sqrt
 from pathlib import Path
 
 WORLD_SIZE = 560.0
 IMAGE_SIZE = 513
+HEIGHT_OFFSET = -10.0
+HEIGHT_SCALE = 38.0
 
 # A crest point is (x, z, height, left flank width, right flank width).
 # Connected points describe one mountain mass: saddle heights stay well above
@@ -114,6 +120,14 @@ SPURS = (
 RIDGES = (MAIN_RIDGE, WEST_RIDGE, EAST_RIDGE, BACK_RIDGE,
           EASTERN_RANGE, WESTERN_RANGE, SOUTHERN_RANGE) + SPURS
 
+# Lake basin. The bowl is tangent to the valley floor at its rim, so the
+# shoreline is set by the terrain crossing WATER_LEVEL rather than by the
+# ellipse below; lobes keep that crossing from reading as a drawn curve.
+WATER_LEVEL = -1.0
+LAKE_CENTRE = (0.0, 10.0)
+LAKE_RADIUS = (46.0, 70.0)
+LAKE_DEPTH = 6.0
+
 
 def prepare_segments() -> tuple:
     """Cache bounds and projection factors; reject distant segments cheaply."""
@@ -139,11 +153,29 @@ def triangle_wave(value: float) -> float:
     return abs(value % 2.0 - 1.0)
 
 
+def basin_depth(x: float, z: float) -> float:
+    """Depth removed from the valley floor, zero outside the lake bowl."""
+    rx = (x - LAKE_CENTRE[0]) / LAKE_RADIUS[0]
+    rz = (z - LAKE_CENTRE[1]) / LAKE_RADIUS[1]
+    if rx == 0.0 and rz == 0.0:
+        return LAKE_DEPTH
+    angle = atan2(rz, rx)
+    lobes = 1.0 + .13 * sin(3.0 * angle + .6) + .07 * cos(5.0 * angle - 1.1)
+    radius = sqrt(rx * rx + rz * rz) / lobes
+    if radius >= 1.0:
+        return 0.0
+    # A broad bed with steeper banks; the exponent above one leaves the rim
+    # tangent to the valley, so no step appears where the bowl ends.
+    return LAKE_DEPTH * (1.0 - radius * radius) ** 1.7
+
+
 def height_at(x: float, z: float) -> float:
-    # Keep the low central valley open for the later lake stage.
-    height = (-2.7 + min(abs(x), 70) * .045 + min(abs(z), 70) * .030
-              + .38 * triangle_wave(x / 13.0 + z / 19.0)
-              + .24 * triangle_wave(z / 11.0 - x / 23.0))
+    # The open central valley, lowered further by the lake basin.
+    floor = (-2.7 + min(abs(x), 70) * .045 + min(abs(z), 70) * .030
+             + .38 * triangle_wave(x / 13.0 + z / 19.0)
+             + .24 * triangle_wave(z / 11.0 - x / 23.0)
+             - basin_depth(x, z))
+    height = floor
     for segment in SEGMENTS:
         min_x, max_x, min_z, max_z = segment[:4]
         if x < min_x or x > max_x or z < min_z or z > max_z:
@@ -159,28 +191,39 @@ def height_at(x: float, z: float) -> float:
             continue
         distance = sqrt(distance2) / width
         profile = (1.0 - distance) * (1.0 - .25 * distance)
-        candidate = -2.5 + (h + dh * t + 2.5) * profile
+        # Interpolating from the local floor rather than a fixed level keeps
+        # the flank continuous where it meets the valley or the lake bed.
+        candidate = floor + (h + dh * t - floor) * profile
         height = max(height, candidate)
     return height
 
 
 def main() -> None:
     pixels = bytearray()
+    submerged = 0
     for z in range(IMAGE_SIZE):
         world_z = (z / (IMAGE_SIZE - 1) - .5) * WORLD_SIZE
         for x in range(IMAGE_SIZE):
             world_x = (x / (IMAGE_SIZE - 1) - .5) * WORLD_SIZE
             height = height_at(world_x, world_z)
-            if not -4.0 <= height < 28.0:
+            if not HEIGHT_OFFSET <= height < HEIGHT_OFFSET + HEIGHT_SCALE:
                 raise ValueError(f'Height outside image encoding range at {world_x}, {world_z}')
-            pixels.append(round((height + 4.0) / 32.0 * 255))
+            submerged += height < WATER_LEVEL
+            pixels.append(round((height - HEIGHT_OFFSET) / HEIGHT_SCALE * 255))
     destination = Path(__file__).resolve().parents[1] / 'assets/heightmaps/mountain_lake.pgm'
     destination.parent.mkdir(parents=True, exist_ok=True)
     header = f'P5\n{IMAGE_SIZE} {IMAGE_SIZE}\n255\n'.encode('ascii')
     destination.write_bytes(header + pixels)
+    decode = lambda value: value / 255 * HEIGHT_SCALE + HEIGHT_OFFSET
     print(f'Generated {destination} ({IMAGE_SIZE} x {IMAGE_SIZE}, {len(SEGMENTS)} ridge segments)')
-    print(f'Decoded range: {min(pixels) / 255 * 32 - 4:.3f} to {max(pixels) / 255 * 32 - 4:.3f}')
+    print(f'Decoded range: {decode(min(pixels)):.3f} to {decode(max(pixels)):.3f}')
+    print(f'Lake bed: {height_at(*LAKE_CENTRE):.3f}; water level: {WATER_LEVEL:.3f}; '
+          f'submerged samples: {submerged / len(pixels) * 100:.2f}%')
     print(f'Central valley: {height_at(0, 0):.3f}; starting-camera ground: {height_at(0, 36):.3f}')
+    for axis, label in (((1, 0), 'east'), ((-1, 0), 'west'), ((0, 1), 'south'), ((0, -1), 'north')):
+        shore = next((d for d in range(1, 281)
+                      if height_at(axis[0] * d, LAKE_CENTRE[1] + axis[1] * d) >= WATER_LEVEL), None)
+        print(f'  shore {label} of the basin centre: {shore} units')
 
 
 if __name__ == '__main__':

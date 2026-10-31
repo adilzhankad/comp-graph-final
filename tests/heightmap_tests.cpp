@@ -1,4 +1,5 @@
 #include "Heightmap.h"
+#include "World.h"
 
 #include <algorithm>
 #include <cmath>
@@ -66,14 +67,47 @@ int main(int argc, char** argv) {
             check(scene.width() == 513 && scene.depth() == 513, "decode committed PGM dimensions");
             check(scene.heightAt(0, 0) < .5f, "terrain retains its central valley");
             float maximum = -1000.0f;
+            float minimum = 1000.0f;
+            std::size_t submerged = 0;
             for (int z = 0; z < scene.depth(); ++z) {
                 for (int x = 0; x < scene.width(); ++x) {
                     maximum = std::max(maximum, scene.sample(x, z));
+                    minimum = std::min(minimum, scene.sample(x, z));
+                    submerged += scene.sample(x, z) < mla::world::waterLevel;
                     check(near(glm::length(scene.normalAt(x, z)), 1), "terrain normals stay unit length");
                 }
             }
             check(maximum > 20, "heightmap contains mountain peaks");
             check(maximum < 27.5f, "mountain summits fit the image range without clipping");
+            check(minimum > -9.9f, "lake bed fits the image range without clipping");
+
+            // The lake exists only where the ground is carved below the water
+            // level, so the basin and its banks are a heightmap property.
+            const auto area = static_cast<float>(scene.width()) * scene.depth();
+            check(submerged > area * .005f && submerged < area * .05f,
+                  "the basin floods a lake-sized part of the valley, not a pond or a sea");
+            check(scene.heightAt(0, 10) < mla::world::waterLevel - 5.0f,
+                  "the basin centre is deep enough to read as water, not a puddle");
+            for (const auto bank : {glm::vec2(0, 120), glm::vec2(0, -90),
+                                    glm::vec2(110, 10), glm::vec2(-110, 10)}) {
+                check(scene.heightAt(bank.x, bank.y) > mla::world::waterLevel,
+                      "the valley rises above the water level around the basin");
+            }
+            // The southern bank is open valley, so the profile from the bed
+            // out to the plain must rise gently and break the surface once.
+            // A stepped rim or a second crossing would show as a cliff or a
+            // ring of puddles at the shoreline.
+            int crossings = 0;
+            float previous = scene.heightAt(0, 10);
+            check(previous < mla::world::waterLevel, "the profile starts on the lake bed");
+            for (int step = 1; step <= 130; ++step) {
+                const float height = scene.heightAt(0, static_cast<float>(10 + step));
+                check(std::abs(height - previous) < .6f,
+                      "the southern bank slopes into the water instead of stepping");
+                crossings += (previous < mla::world::waterLevel) != (height < mla::world::waterLevel);
+                previous = height;
+            }
+            check(crossings == 1, "the southern bank breaks the surface exactly once");
         }
     } catch (const std::exception& error) {
         std::cerr << "Unexpected failure: " << error.what() << '\n';
