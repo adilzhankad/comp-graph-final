@@ -36,3 +36,18 @@ Run on a second machine after the terrain revision above, so the two sections de
 `preview.png` is the current application capture, taken by `--smoke-test --capture`. The heightmap test now covers the flooded area, the bed depth, the banks and the southern bank profile, so a regenerated heightmap that loses the basin fails the suite rather than silently draining the lake.
 
 No performance benchmark is claimed for this pass either: the smoke test renders four frames and does not measure frame time. The FPS table in the README still needs a real measurement at 1280x720 on each team machine. Linux and macOS runtime, GitHub CI results and interactive exploration remain team review tasks.
+
+## Skybox and textures (task 02, in progress)
+
+Branch `feat/skybox-textures`. `Texture`, `Skybox`, `shaders/skybox.*` and the generated cubemap exist; they are not connected to `Scene` yet, because that waits for the render-pass split from task 01. Nothing below is an application run.
+
+| Check | Result |
+|---|---|
+| Strict compile | `src/Texture.cpp` and `src/Skybox.cpp` compile with GCC and Clang under `-Wall -Wextra -Wpedantic -Werror`. MSVC `/W4` not yet run. |
+| Headless render | A throwaway harness (not committed) created an OpenGL 4.5 core context on Mesa llvmpipe through EGL, loaded the six faces through `Texture::loadCubemap`, and drew the skybox from five directions into a 640×360 framebuffer cleared to magenta. |
+| Coverage and depth | No magenta pixel remained in any view: the `.xyww` depth of 1.0 passes with `GL_LEQUAL`. `glGetIntegerv(GL_DEPTH_FUNC)` returned `GL_LESS` after every draw. `glGetError` stayed `GL_NO_ERROR`. |
+| Seams and orientation | Views across a cube edge, a cube corner and the zenith showed no seam and no mirrored or rotated face; the Milky Way band continues across face boundaries. |
+| Ownership | A moved-from `Skybox` (and its `Texture`) was destroyed without errors. A missing file throws `Cannot load texture <path>: can't fopen`. |
+| Asset size | Six 1024×1024 PNGs, about 680 KB in total. |
+
+Still to do: wire the pass into `Scene` after task 01, replace `sky()` in `lake.frag` with the cubemap sample, terrain grass/rock/snow textures, Release/Debug/ctest/smoke test on Windows, and screenshots from the application itself.
