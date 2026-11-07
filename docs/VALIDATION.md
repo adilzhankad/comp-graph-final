@@ -2,6 +2,27 @@
 
 Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
 
+## Finer low-poly terrain — 2026-11-07
+
+Terrain sampling increased from 128x128 to 256x256 cells: cell width is now
+2.1875 instead of 4.375 world units, with 131,072 triangles instead of 32,768.
+Split face normals, flat material interpolation, proportional vertex jitter
+and mixed diagonals retain the low-poly style. The source heightmap is unchanged.
+The lake retains its independent 128x128 sampling grid and 780 triangles.
+
+Release and Debug previews built with MSVC 19.44 and passed the four-frame
+OpenGL smoke test on Intel Iris Xe; both CPU suites passed (2/2 each).
+The capture harness passed pause, upper-sky and
+render-state checks. Default, near-water and downward captures were reviewed:
+the mountain silhouette and facets are finer, and no shoreline coverage gaps
+were observed. `preview.png` records the new terrain at scene time 3 seconds.
+
+At 1280x720, 15 warmup plus 120 synchronized frames measured mean CPU+GPU
+serial frame latency of 6.140 ms, median 5.950 ms and p95 7.999 ms; a preceding
+128-cell run measured mean 4.723 ms. These hidden-window `glFinish` measurements
+are indicative cost evidence on this machine, not an interactive FPS benchmark.
+Historical counts and timings below refer to the earlier geometry.
+
 ## Water palette and reflection tuning — 2026-11-07
 
 Softened broad waves to 80% and fine waves toward 45% of their preceding

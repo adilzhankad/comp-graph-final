@@ -9,8 +9,8 @@ namespace mla {
 
 // Flat water surface filling the carved basin at world::waterLevel.
 //
-// The surface is a subset of the terrain grid: cells far from any submerged
-// sample are dropped, and the ones that remain are left to overlap the shore.
+// An independent, coarser grid samples the same height field: cells far from
+// submerged samples are dropped; the remaining ones overlap the shore.
 // The depth test clips them against the ground, so the shoreline follows the
 // terrain exactly instead of being approximated by the water mesh.
 class Lake {

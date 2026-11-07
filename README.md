@@ -34,7 +34,7 @@ The current milestone is the **terrain, lake and starry sky**: a low-poly mounta
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
-- A 513×513 grayscale heightmap covering **560×560 world units**, sampled onto a 128×128-cell mesh with **32,768 triangles**. The larger terrain covers sixteen times the area of the initial 140×140 landscape, while coarse 4.375-unit cells preserve the low-poly look.
+- A 513×513 grayscale heightmap covering **560×560 world units**, sampled onto a 256×256-cell mesh with **131,072 triangles**. Cells are 2.1875 units wide, half the previous width, revealing more mountain detail while flat face normals preserve the low-poly look.
 - Connected mountain ridges with uneven crests, elevated saddles, shared flanks and descending spurs. Irregularly spaced interior vertices and varied triangle diagonals preserve the low-poly shapes; each triangle has its own geometric normal for flat shading.
 - Muted green foothills, grey rock and pale summits, coloured per face by height and slope under cool night ambient and directional light.
 - A lake basin carved into the valley floor, flooded to a fixed water level. The 780-triangle water surface covers only the submerged cells and is clipped against the ground by the depth test, so the shoreline follows the terrain exactly.
@@ -208,7 +208,7 @@ comp-graph-final/
 │   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
 │   ├── ImageLoader.cpp   # the single stb_image implementation translation unit
 │   ├── Terrain.h/.cpp    # coarse irregular grid and flat triangle normals
-│   ├── Lake.h/.cpp       # water surface restricted to the submerged terrain cells
+│   ├── Lake.h/.cpp       # independent coarse water grid restricted to the basin
 │   ├── Skybox.h/.cpp     # owning cubemap and cube mesh, image validation
 │   ├── Aurora.h/.cpp     # deferred prototype, excluded from the application build
 │   └── Primitives.h/.cpp # deferred prop geometry, excluded from the application build
@@ -251,7 +251,7 @@ Steps 2, 3 and 4 are implemented, with the terrain, skybox and lake respectively
 
 ### Terrain from a heightmap
 
-The current asset contains 513×513 grayscale samples spanning 560×560 world units. Heights are decoded as `heightOffset + heightScale · I`, where `I` is pixel brightness in `[0, 1]`. The renderer samples this field onto 128×128 cells, with deterministic interior vertex jitter and varied diagonals, producing 32,768 triangles. Each cell remains roughly 4.375 units wide, so the expanded area keeps large, readable facets. The heightmap generator forms mountains along connected ridge lines: crest heights vary through peaks and saddles, while asymmetric flanks and descending spurs connect them into long ranges. Several overlapping ranges provide depth beyond the open central valley.
+The current asset contains 513×513 grayscale samples spanning 560×560 world units. Heights are decoded as `heightOffset + heightScale · I`, where `I` is pixel brightness in `[0, 1]`. The renderer samples this field onto 256×256 cells, with deterministic interior vertex jitter and varied diagonals, producing 131,072 triangles. Each cell is 2.1875 units wide, half the previous 4.375-unit width; triangle count is four times higher. Separate face normals retain readable low-poly facets. The heightmap generator forms mountains along connected ridge lines: crest heights vary through peaks and saddles, while asymmetric flanks and descending spurs connect them into long ranges. Several overlapping ranges provide depth beyond the open central valley.
 
 Vertices are duplicated between triangles, with one geometric normal shared by all three vertices of each face:
 
@@ -302,7 +302,7 @@ The fragment shader adds a dark blue atmosphere and fades the star map into `uFo
 
 The generator carves a lobed bowl into the valley floor and the renderer floods it to `mla::world::waterLevel`, the single constant the generator, the renderer and the tests all read. Nothing stores a shoreline: the lake is wherever the ground is below that height.
 
-The surface reuses the 128×128 terrain grid. A cell is kept when a terrain sample within one cell of it is submerged, which leaves 780 triangles instead of the grid's 32,768, and the kept cells deliberately overrun the shore. Those overlapping quads sit under the ground, so the depth test — the water pass reads depth but writes none — clips them to the exact terrain intersection. The one-cell margin covers the terrain mesh's vertex jitter and sub-cell dips that corner samples alone would miss.
+The surface uses an independent 128×128-cell grid over the same heightmap; the terrain is rendered at 256×256 cells. A water cell is kept when a heightmap sample within one coarse cell of it is submerged, leaving 780 triangles from that water grid's possible 32,768. The kept cells deliberately overrun the shore. Those overlapping quads sit under the ground, so the depth test — the water pass reads depth but writes none — clips them to the terrain intersection. The coarse one-cell margin covers the finer terrain mesh's vertex jitter and sub-cell dips that corner samples alone would miss.
 
 The mesh stays flat and every ripple comes from the fragment shader. Sixteen directional gravity-wave components combine broad undulations, finer wind ripples and weaker crossing waves. Their angular frequencies follow `ωᵢ = sqrt(9.81·kᵢ)`. Slowly advected wind patches vary their strength and gently bend their crests; moving wave-packet envelopes break up uniform bands. A mild second harmonic sharpens the crests. The normal includes the analytic gradients of the envelopes and the bounded phase bend, without displacement or per-frame uploads:
 

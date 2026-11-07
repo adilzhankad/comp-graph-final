@@ -10,8 +10,9 @@ Terrain::Terrain(const std::filesystem::path& heightmap)
     : heights_(heightmap), mesh_(makeMesh(heights_)) {}
 
 Mesh Terrain::makeMesh(const Heightmap& heights) {
-    // Each coarse triangle owns its vertices: normals never blend across edges.
-    constexpr int cells = 128;
+    // Halve the former 4.375-unit cell width for finer mountain silhouettes.
+    // Each triangle still owns its vertices: normals never blend across edges.
+    constexpr int cells = 256;
     constexpr int side = cells + 1;
     const float cellSize = heights.worldSize() / cells;
     std::vector<glm::vec3> points(side * side);
