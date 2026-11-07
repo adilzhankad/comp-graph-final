@@ -30,6 +30,7 @@ add_executable(MountainLakeAurora
     src/main.cpp src/Shader.cpp src/Mesh.cpp src/Terrain.cpp
     src/Lake.cpp src/Scene.cpp
     src/Texture.cpp
+    src/Skybox.cpp
 )
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
 target_compile_definitions(MountainLakeAurora PRIVATE GLFW_INCLUDE_NONE NOMINMAX)
