@@ -1,8 +1,67 @@
-﻿# Terrain, fog and lake validation
+﻿# Terrain, lake and starry-sky validation
 
-Updated 2026-10-31. The current scene renders the low-poly terrain and the lake. The aurora and prop modules are retained as future prototypes.
+Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
 
-Latest terrain revision: seven connected ridge chains and twelve descending spurs replace the isolated peak envelopes. The visible starting skyline now has elevated saddles and shared flanks. The regenerated heightmap passed the existing heightmap test executable, and a visible-window OpenGL capture was checked visually and passed the application's error checks. `preview.png` records this revision. C++ and shader source did not change in this pass; the build results below remain the preceding code baseline.
+## Water palette and reflection tuning — 2026-11-07
+
+Softened broad waves to 80% and fine waves toward 45% of their preceding
+amplitudes, reduced the crest harmonic, and moved the body/highlight palette
+toward muted blue-grey. Sky reflection now uses an artistic `0.20 + 0.80*F`
+blend weight; opacity varies from 0.82 to 0.98. The 16-wave motion is retained.
+
+The hidden-context harness passed time variation, exact pause, unchanged upper
+sky and render-state checks with no OpenGL errors. Default, low near-water and
+downward captures were reviewed. Release-context validation and the Debug
+application's smoke test passed. `preview.png` records this tuning at time 3.
+The reflection contains the sky only; planar terrain reflection remains planned.
+
+## Irregular wind ripples — 2026-11-07
+
+The lake fragment shader now combines 16 directional gravity-wave components,
+advected wind-strength patches and wave groups, gently bent crests and a mild
+second harmonic. Analytic gradients drive the normals; screen derivatives fade
+subpixel waves. The 780-triangle surface and shoreline clipping are unchanged.
+
+| Check | Result |
+|---|---|
+| Shader compatibility | Release and Debug applications compiled/linked the GLSL 330 shader and passed hidden-window smoke checks on Intel Iris Xe, OpenGL 3.3 / driver 32.0.101.6913 |
+| Temporal behaviour | Captured scene times 0, 1, 3 and 8 seconds; lower-frame water changed while the upper sky remained byte-identical |
+| Pause | Rendering time 3 twice produced byte-identical frames |
+| Render state | No OpenGL errors; depth/blend/polygon state restored; filled frame after wireframe matched the original |
+| Views | Default, low near-water and downward captures checked; existing shoreline occlusion retained |
+| Preview | `preview.png` updated to the new ripples at scene time 3 seconds |
+
+A temporary harness measured the entire scene in a hidden 1280x720 window with
+15 warmup frames and 120 measured frames, synchronizing each frame with
+`glFinish`. Final candidate CPU+GPU serial latency was mean 4.344 ms, median
+4.312 ms and p95 5.123 ms. A preceding baseline run measured mean 2.876 ms;
+separate runs are affected by GPU clocks and system load, so this is indicative
+cost evidence, not an interactive FPS benchmark or an isolated shader timing.
+No mesh displacement, fluid dynamics or shoreline-wave simulation is claimed.
+
+## Starry sky and night environment — 2026-11-07
+
+The following checks used a clean isolated source copy of the new skybox implementation on Windows x64.
+
+| Check | Result |
+|---|---|
+| Release and Debug builds | Both clean builds passed with MSVC 19.44 |
+| CPU tests | Camera/hierarchy and heightmap suites passed in both configurations (2/2 each) |
+| Graphics smoke test | Both configurations rendered four hidden-window frames successfully; shaders compiled/linked and no OpenGL errors were reported |
+| GPU | Intel Iris Xe Graphics, OpenGL 3.3.0 / driver 32.0.101.6913 |
+| Additional views | Temporary harness rendered default, upward, opposite, translated, wireframe and filled-after-wireframe views |
+| Visual review | Default, upward, opposite and translated captures reviewed; no obvious cubemap seams observed |
+| Render state | Depth, blending and polygon state restored; filled frame after wireframe was byte-identical to the initial filled frame |
+| Sky translation | Upper-sky pixels changed by at most 1/255 per RGB channel under camera translation, consistent with floating-point view-matrix precision |
+| Resource failure | Missing-face error reported correctly; partial-resource cleanup check passed |
+
+`preview.png` is the new 1280×720 night-scene capture. The lake samples the same star cubemap as the sky, with matching night tint and horizon haze. This is distant-sky reflection, not the planned planar reflection of terrain, props or animated aurora.
+
+No FPS benchmark, interactive keyboard/mouse validation or cross-platform runtime result is claimed for this pass. The temporary harness checks render behaviour directly; it does not verify input dispatch. Team interaction review, performance measurements, fresh-clone validation and GitHub CI results remain outstanding.
+
+## Terrain refinement — 2026-10-31
+
+Seven connected ridge chains and twelve descending spurs replaced the isolated peak envelopes. The starting skyline gained elevated saddles and shared flanks. The regenerated heightmap passed the existing heightmap test executable, and a visible-window OpenGL capture was checked visually and passed the application's error checks. C++ and shader source did not change in that pass; the build results below record the preceding code baseline.
 
 | Check | Result |
 |---|---|
@@ -14,7 +73,7 @@ Latest terrain revision: seven connected ridge chains and twelve descending spur
 | Low-poly geometry | Split triangle vertices with flat geometric normals; jittered shared positions and mixed diagonals |
 | Fog | Smooth distance fade from95 to230 units; boundary fade from205 to260 on each axis before the mesh ends at280 |
 
-`preview.png` is the current application capture. Fog is fully opaque and exactly matches the background before reaching the outer boundary, including when approaching it. Face lighting remains flat while fog interpolates smoothly.
+The capture at this stage showed fully opaque fog matching the background before the outer boundary, including when approaching it. Face lighting remained flat while fog interpolated smoothly. The preview image has since been replaced by the night-scene capture above.
 
 No performance benchmark or cross-platform runtime result is claimed. Interactive exploration and GitHub CI remain team review tasks. Python was used only to regenerate the heightmap and convert the preview; ordinary builds still need no Python or downloads.
 
@@ -33,6 +92,6 @@ Run on a second machine after the terrain revision above, so the two sections de
 | Shoreline | Visual check from the bank and from above: the water is clipped to the terrain with no mesh-edge stair-stepping and no gap at the shore |
 | Highlight | Blinn-Phong streak confirmed by rotating the light with `[` / `]` until it faces the camera |
 
-`preview.png` is the current application capture, taken by `--smoke-test --capture`. The heightmap test now covers the flooded area, the bed depth, the banks and the southern bank profile, so a regenerated heightmap that loses the basin fails the suite rather than silently draining the lake.
+A lake capture was produced with `--smoke-test --capture` for this pass; the preview image has since been replaced by the night-scene capture above. The heightmap test covers the flooded area, the bed depth, the banks and the southern bank profile, so a regenerated heightmap that loses the basin fails the suite rather than silently draining the lake.
 
 No performance benchmark is claimed for this pass either: the smoke test renders four frames and does not measure frame time. The FPS table in the README still needs a real measurement at 1280x720 on each team machine. Linux and macOS runtime, GitHub CI results and interactive exploration remain team review tasks.

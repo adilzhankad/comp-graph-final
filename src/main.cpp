@@ -27,7 +27,7 @@ void printHelp() {
     std::cout << "\nMountain Lake & Aurora - low-poly terrain\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
         << "Tab capture/release mouse | [ / ] light direction | T pause waves\n"
-        << "P wireframe | H console help | Esc quit. Current scene: terrain and lake.\n"
+        << "P wireframe | H console help | Esc quit. Current scene: terrain, starry sky and lake.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
