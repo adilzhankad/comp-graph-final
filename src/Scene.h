@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "Lake.h"
+#include "ReflectionTarget.h"
 #include "Shader.h"
 #include "Skybox.h"
 #include "Terrain.h"
@@ -14,6 +15,7 @@ struct SceneSettings {
     // Animation clock, separate from frame delta time so it can be paused.
     float time = 0.0f;
     bool wireframe = false;
+    bool reflections = true;
 };
 
 // Terrain, starry sky and lake. Aurora remains a separate geometry prototype.
@@ -27,9 +29,12 @@ public:
     const Lake& lake() const { return lake_; }
 
 private:
+    void renderEnvironment(const glm::mat4& view, const glm::mat4& projection,
+                           glm::vec3 eye, glm::vec3 light, bool wireframe, bool clipWater);
     Terrain terrain_;
     Lake lake_;
     Skybox skybox_;
+    ReflectionTarget reflection_;
     Shader terrainShader_;
     Shader lakeShader_;
     Shader skyboxShader_;

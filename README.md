@@ -35,11 +35,13 @@ The current milestone is the **terrain, lake and starry sky**: a low-poly mounta
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
 - A 513×513 grayscale heightmap covering **560×560 world units**, sampled onto a 256×256-cell mesh with **131,072 triangles**. Cells are 2.1875 units wide, half the previous width, revealing more mountain detail while flat face normals preserve the low-poly look.
+- A smooth runtime uplift raises the highest mountain samples from about 26.66 to 32.07 units (roughly 20%), while leaving samples at or below 5 units and the lake basin unchanged. The original heightmap asset and encoding are preserved.
 - Connected mountain ridges with uneven crests, elevated saddles, shared flanks and descending spurs. Irregularly spaced interior vertices and varied triangle diagonals preserve the low-poly shapes; each triangle has its own geometric normal for flat shading.
 - Muted green foothills, grey rock and pale summits, coloured per face by height and slope under cool night ambient and directional light.
 - A lake basin carved into the valley floor, flooded to a fixed water level. The 780-triangle water surface covers only the submerged cells and is clipped against the ground by the depth test, so the shoreline follows the terrain exactly.
 - Transparent water with Schlick fresnel and an artistic reflection floor, per-fragment normals from 16 directional waves with evolving wind patches and wave packets, and a soft Blinn-Phong highlight that `[` / `]` sweep across the lake. Fine ripples are softened and subpixel ripples filtered to steady the reflected stars.
-- A starry skybox using six 1024×1024 cubemap faces reprojected from NASA SVS's Deep Star Maps panorama, with mipmaps and seamless cubemap filtering. The lake samples the same sky texture for its rippling reflection.
+- A starry skybox using six 1024×1024 cubemap faces reprojected from NASA SVS's Deep Star Maps panorama, with mipmaps and seamless cubemap filtering.
+- Planar reflections of the mountains, shore and sky, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
@@ -71,7 +73,7 @@ The aurora and prop prototype files are retained for later work, but are exclude
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
-- [ ] **Real reflection in the lake** — render the scene mirrored below the water plane into a framebuffer texture, sample it in the lake shader with projective UVs.
+- [x] **Real reflection in the lake** — the current terrain, shore and sky render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. Future props and aurora still need integration into that pass.
 - [ ] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
 - [ ] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
 
@@ -93,7 +95,7 @@ The aurora and prop prototype files are retained for later work, but are exclude
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices and reusable scene-node code; no parent–child object group in the active scene yet. |
 | R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Flat terrain faces with ambient and directional diffuse lighting; per-fragment fresnel and Blinn-Phong specular on the water from the same movable light. A second light source and the final material shading are deferred. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours and a mipmapped night cubemap used by the sky and water. Terrain/prop textures and aurora integration remain. |
-| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, wave pause, wireframe and mouse capture. Other scene controls are inactive. |
+| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, wave pause, reflection toggle, wireframe and mouse capture. Other scene controls are inactive. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
 | R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies; clean isolated-source Windows Release/Debug builds and tests passed. Fresh-clone and cross-platform validation remain. |
 
@@ -112,12 +114,13 @@ These controls apply to the current terrain, lake and starry-sky scene. `H` prin
 | `Left Shift` | Move faster |
 | `[` / `]` | Rotate the directional light: inspect mountain faces and sweep the highlight across the lake |
 | `T` | Pause / resume the animation clock, freezing the waves |
+| `R` | Toggle planar scene reflections; off uses the earlier sky-only reflection |
 | `P` | Wireframe on / off |
 | `H` | Print current controls to the terminal; on-screen help is planned |
 | `Tab` | Release / capture the mouse |
 | `Esc` | Quit |
 
-Planned bindings for later milestones are `G` for cinematic glide, arrow keys for aurora intensity/speed, `F` for the campfire, `M` + mouse drag for the moon, `R` for reflections, and `1`/`2`/`3` for wave presets. They have no action in the current scene. On-screen help is also deferred.
+Planned bindings for later milestones are `G` for cinematic glide, arrow keys for aurora intensity/speed, `F` for the campfire, `M` + mouse drag for the moon, and `1`/`2`/`3` for wave presets. They have no action in the current scene. On-screen help is also deferred.
 
 ---
 
@@ -203,7 +206,8 @@ comp-graph-final/
 │   ├── Mesh.h/.cpp       # owning VAO/VBO/EBO wrapper, indexed draw
 │   ├── Camera.h/.cpp     # fly camera, frame-rate independent movement
 │   ├── SceneNode.h/.cpp  # scene graph: local transform, children, world matrix
-│   ├── Scene.h/.cpp      # terrain, skybox and lake passes, directional light
+│   ├── Scene.h/.cpp      # reflection, terrain, skybox and lake passes
+│   ├── ReflectionTarget.h/.cpp # owning colour/depth framebuffer, safe resize
 │   ├── World.h           # scene constants shared by renderer, generator and tests
 │   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
 │   ├── ImageLoader.cpp   # the single stb_image implementation translation unit
@@ -236,13 +240,13 @@ Rule of thumb for D2: one class per concept, no application source file over ~50
 
 ## Technical notes
 
-The active renderer performs an opaque terrain pass with flat lighting, a skybox pass, then a blended water pass. The terrain, skybox and lake sections below describe this implementation; the other scene sections preserve the **planned final design** for later milestones.
+The active renderer first captures terrain and sky from a camera mirrored across the lake. It then performs the main opaque terrain pass with flat lighting, a skybox pass, and a blended water pass that samples the reflection. The terrain, skybox and lake sections below describe this implementation; the other scene sections preserve the **planned final design** for later milestones.
 
 ### Planned final render order per frame
 
-Steps 2, 3 and 4 are implemented, with the terrain, skybox and lake respectively.
+Steps 1–4 are implemented for the terrain, skybox and lake. Other objects and the final UI remain planned.
 
-1. *(stretch)* Reflection pass: camera mirrored below the water plane, clip plane `y > waterLevel`, render terrain + trees + campfire + skybox + aurora into a framebuffer.
+1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, render terrain and sky into a framebuffer. Trees, campfire and aurora will join this pass when integrated.
 2. **Opaque pass: terrain**, trees, campfire, tent, boat.
 3. **Skybox** (depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled).
 4. **Lake — alpha blending, depth write off.**
@@ -251,7 +255,11 @@ Steps 2, 3 and 4 are implemented, with the terrain, skybox and lake respectively
 
 ### Terrain from a heightmap
 
-The current asset contains 513×513 grayscale samples spanning 560×560 world units. Heights are decoded as `heightOffset + heightScale · I`, where `I` is pixel brightness in `[0, 1]`. The renderer samples this field onto 256×256 cells, with deterministic interior vertex jitter and varied diagonals, producing 131,072 triangles. Each cell is 2.1875 units wide, half the previous 4.375-unit width; triangle count is four times higher. Separate face normals retain readable low-poly facets. The heightmap generator forms mountains along connected ridge lines: crest heights vary through peaks and saddles, while asymmetric flanks and descending spurs connect them into long ranges. Several overlapping ranges provide depth beyond the open central valley.
+The current asset contains 513×513 grayscale samples spanning 560×560 world units. Heights are decoded as `heightOffset + heightScale · I`, where `I` is pixel brightness in `[0, 1]`. `Terrain` then applies a smooth runtime uplift to each sample: `h' = h + 0.25·max(h − 5, 0)·smoothstep(5, 12, h)`. The highest sample rises from about 26.66 to 32.07 units, roughly 20%; samples at or below 5 units, including the lake basin, stay unchanged. The raw image, its [-10, 28] encoding and the generic heightmap loader are unchanged. Rendering and CPU height/slope queries share the adjusted field.
+
+The renderer samples that field onto 256×256 cells, with deterministic interior vertex jitter and varied diagonals, producing 131,072 triangles. Each cell is 2.1875 units wide, half the previous 4.375-unit width; triangle count is four times higher. Separate face normals retain readable low-poly facets. The heightmap generator forms mountains along connected ridge lines: crest heights vary through peaks and saddles, while asymmetric flanks and descending spurs connect them into long ranges. Several overlapping ranges provide depth beyond the open central valley.
+
+Local rollback checkpoints are `backup/terrain-original` (`f201ac3`, before the denser mesh) and `backup/terrain-before-height-increase` (`a26d505`, denser mesh before the uplift). These preserve both earlier appearances for comparison or restoration.
 
 Vertices are duplicated between triangles, with one geometric normal shared by all three vertices of each face:
 
@@ -285,7 +293,7 @@ The sky uses NASA SVS's [Deep Star Maps](https://svs.gsfc.nasa.gov/3895/) celest
 
 `Skybox` owns the texture and cube mesh, validates equal square face dimensions, and generates mipmaps. The vertex shader removes camera translation and places the cube at far depth. The scene draws it behind opaque terrain with `GL_LEQUAL` and no depth writes, then restores the water pass's depth state. The sky remains filled in wireframe mode.
 
-The fragment shader adds a dark blue atmosphere and fades the star map into `uFogColor` near and below the horizon. The terrain and water share that fog colour, while the lake applies the same sky treatment to its cubemap reflection. This environment reflection contains the distant sky only; mirrored terrain, props and dynamic aurora still need the planned planar reflection pass. Aurora is not baked into the star map.
+The fragment shader adds a dark blue atmosphere and fades the star map into `uFogColor` near and below the horizon. The terrain and water share that fog colour. The planar reflection pass draws this same sky behind the mirrored mountains; direct cubemap sampling remains the fallback when scene reflections are disabled or the camera is below the water. Aurora is not baked into the star map.
 
 ### Aurora shader (planned integration)
 
@@ -314,9 +322,12 @@ n   = normalize((-∇h.x, 1, -∇h.y))
 
 Here `Eᵢ` is the wind/packet envelope and `φᵢ` includes the weak phase bend. Screen-space `fwidth` fades unresolved waves and their second harmonics separately, reducing distant reflection shimmer. This is an approximate visual water model, not a full fluid, FFT or shoreline simulation; the shoreline and water silhouette remain fixed. The wave-combination, dispersion and analytic-normal concepts are described by Mark Finch in [GPU Gems, Chapter 1](https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models); this shader implementation and its packet/bend tuning are original to the project.
 
-The muted blue-grey body colour shares the landscape's palette. Schlick fresnel remains `F = F₀ + (1 − F₀)·(1 − cosθ)⁵`, `F₀ = 0.02`; an artistic blend weight `0.20 + 0.80·F` strengthens the sky reflection even near the camera. A restrained Blinn-Phong lobe of exponent 112 supplies the soft directional highlight. The cubemap is sampled along `reflect(-v, n)` with the same night tint and horizon haze as the visible sky. Alpha varies from 0.82 to 0.98 with Fresnel, retaining a little bed visibility while giving the reflection more presence. Broad wave amplitudes are scaled to 80%, fine waves fade toward 45%, and the crest harmonic is softened to match the low-poly surroundings. The terrain's fog is repeated in the water shader, and both passes take the horizon haze colour as `uFogColor`, so shore and water reach it together. Reflected terrain still requires the separate planned reflection pass.
+The muted blue-grey body colour shares the landscape's palette. Schlick fresnel remains `F = F₀ + (1 − F₀)·(1 − cosθ)⁵`, `F₀ = 0.02`; an artistic blend weight `0.20 + 0.80·F` strengthens the reflection even near the camera. A restrained Blinn-Phong lobe of exponent 112 supplies the soft directional highlight. Alpha varies from 0.82 to 0.98 with Fresnel, retaining a little bed visibility while giving the reflection more presence. Broad wave amplitudes are scaled to 80%, fine waves fade toward 45%, and the crest harmonic is softened to match the low-poly surroundings. Terrain, water and sky use the same horizon haze colour.
 
-- *(stretch)* Reflection: screen-space projective UVs `uv = clip.xy / clip.w · 0.5 + 0.5`, flipped in Y, distorted slightly by the wave normal.
+`ReflectionTarget` owns an RGBA8 colour texture and a 24-bit depth renderbuffer. It resizes with the drawable viewport, scaling both dimensions together to fit within 1280×720, and preserves the previous allocation if resizing fails. The reflected view is `V·M`, where `M` maps `y` to `2·waterLevel − y`. Terrain fragments below the water plane are clipped with `gl_ClipDistance[0]`; clipping is disabled for the sky. The reflected camera position supplies terrain fog distance, while world-space lighting stays unchanged. The lake itself is excluded from the capture.
+
+The lake projects its world position through the reflected view and projection: `uv = clip.xy / clip.w · 0.5 + 0.5`. No extra Y flip is needed because points on the water plane are unchanged by `M`. The difference between the rippled and flat reflected rays gives a small UV distortion, reduced near texture edges; a flat normal introduces no offset. The texture uses linear filtering and edge clamping. `R` disables this extra pass and uses the original cubemap reflection along `reflect(-v, n)` instead. That fallback also covers underwater views and invalid projected coordinates. Props and dynamic aurora will need to be added to the capture when they become active scene objects.
+
 - *(stretch)* Waves: the same wave trains displacing a finer grid, so the silhouette moves as well as the highlights.
 
 ### Instanced pine trees *(stretch)*
@@ -372,4 +383,4 @@ Required by the course rules; kept up to date during the project and copied into
 | Tool | What it was used for | What we changed / checked |
 |---|---|---|
 | Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. Later carved the lake basin into the heightmap generator and implemented the lake surface, its shader and the related tests and documentation. | _Team reviewed and edited the text; fill in further uses here._ Lake build, test and capture evidence is recorded in `docs/VALIDATION.md`. The team must review the water appearance and be able to explain the basin, the depth-test shoreline and the wave-normal derivation at the defense. |
-| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |
+| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer, mirrored terrain/sky pass and projective water sampling; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |

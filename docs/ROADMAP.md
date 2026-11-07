@@ -6,6 +6,8 @@ The README preserves the final project specification. The active scene now inclu
 
 The active scene renders the ground, the mountains, the starry sky and the lake. A 513×513 grayscale heightmap spans 560×560 world units, sixteen times the area of the initial landscape. An irregular 256×256-cell grid produces 131,072 triangles with 2.1875-unit cells, half the previous cell width and four times the triangle count. Connected ridge lines, elevated saddles, asymmetric shared flanks and descending spurs form long mountain ranges around the central valley. Deterministic vertex jitter and varied diagonals break up the grid. Duplicated triangle vertices carry geometric face normals, and flat shader interpolation preserves the low-poly style and distinct muted colour bands on each facet.
 
+`Terrain` applies the runtime sample mapping `h' = h + 0.25·max(h − 5, 0)·smoothstep(5, 12, h)`, raising the highest samples from about 26.66 to 32.07 units (roughly 20%). Samples at or below 5 and the lake basin remain unchanged. Rendering and CPU terrain queries use the same adjusted field; the raw image, encoding and generic heightmap loader are unchanged. Local rollback checkpoints are recorded in the README, and [validation notes](VALIDATION.md) track the checks.
+
 Smooth fog fades distant terrain from 95 to 230 units from the camera. An additional world-space fog band reaches the blue night haze colour from 205 to 260 units along either horizontal axis, before the mesh boundary at ±280. The skybox horizon and the lake use that same haze colour. Fog blends continuously across faces while the material and directional lighting remain flat.
 
 Aurora and prop prototype files remain in the repository for later use, but the current application does not compile or render them. The reusable camera, mesh, shader and hierarchy infrastructure remains. GLFW and GLAD compile from bundled source; GLM and stb_image are bundled too. The default build needs no dependency download or precompiled libraries.
@@ -24,7 +26,9 @@ The generator carves a lobed basin into the valley floor, which is why the encod
 
 The mesh is flat; the fragment shader builds its normal from 16 directional gravity-wave components at several scales. Moving wind patches and wave-packet envelopes vary their strength, a weak bounded phase bend curves their crests, and a mild second harmonic shapes them. Analytic envelope and phase gradients keep the normals consistent; `fwidth` filtering fades subpixel waves and harmonics to reduce reflection shimmer. This is an approximate visual model without vertex displacement or per-frame uploads, not a full fluid, FFT or shoreline simulation. The conceptual reference is Mark Finch's [GPU Gems, Chapter 1](https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models); the implementation and tuning are original to this project.
 
-Shading is Schlick fresnel between a dark body colour and the reflected sky cubemap, with one Blinn-Phong lobe for the cool directional highlight and the terrain's fog repeated so shore and water reach the horizon haze together. The single directional light now suggests moonlight; the full moon controls, campfire and lantern remain planned. Cubemap reflection covers the distant sky; reflected terrain, props and dynamic aurora still require the separate planar reflection pass. See [validation notes](VALIDATION.md) for measured checks and their limits.
+Shading is Schlick fresnel between a dark body colour and the reflected scene, with one Blinn-Phong lobe for the cool directional highlight and a shared horizon haze colour. The single directional light now suggests moonlight; the full moon controls, campfire and lantern remain planned. See [validation notes](VALIDATION.md) for measured checks and their limits.
+
+The planar reflection pass captures mountains, shore and sky from a camera mirrored across `y = -1`. `gl_ClipDistance[0]` removes underwater terrain, and clipping is disabled before drawing the sky. `ReflectionTarget` owns an RGBA8 colour texture plus a 24-bit depth renderbuffer, resizing with the viewport while preserving aspect within a 1280×720 cap. The water samples this capture with projective UVs and small ripple-driven distortion; no additional Y flip is needed. `R` toggles this pass, falling back to the original sky-only cubemap reflection. Underwater views also use that fallback. The current landscape reflection is implemented; props and dynamic aurora will need integration into the same pass when they return to the scene.
 
 ## Requirement status
 
@@ -35,7 +39,7 @@ Shading is Schlick fresnel between a dark body colour and the reflected sky cube
 | R3: transforms and hierarchy | Camera view/projection and model transforms; reusable parent–child code is retained | Integrate campfire children and boat → lantern when those objects return; derive lantern light position from its world transform. |
 | R4: lighting | Flat ambient/directional diffuse terrain shading with adjustable light direction; per-fragment fresnel and Blinn-Phong specular on the water | Add a second light source: the requirement needs two, one of them dynamic or toggleable. Then the final material shading and the moon/campfire/lantern setup, while preserving the chosen art direction. |
 | R5: textures/equivalent | Grayscale heightmap input, per-face height/slope colours, procedural water normals and a mipmapped six-face cubemap used by the sky and lake | Add a general 2D texture wrapper, UV validation and terrain/log/tent textures with mipmaps; reintroduce procedural aurora. |
-| R6: interaction | Fly camera, directional-light keys, animation pause, wireframe and mouse capture | Add scene controls alongside their respective objects, then on-screen help and cinematic glide. |
+| R6: interaction | Fly camera, directional-light keys, animation pause, reflection toggle, wireframe and mouse capture | Add scene controls alongside their respective objects, then on-screen help and cinematic glide. |
 | R7: real-time performance | Window-title FPS counter; static geometry buffers | Measure average/minimum FPS at 1280×720 on named machines; profile slow passes before adding complexity. |
 | R8: reproducible build | CMake project, bundled sources with version/hash manifest, test commands, resource copying and platform CI configuration | Record clean-build results on Windows and macOS; verify runtime from a different working directory and failure diagnostics. |
 
@@ -44,7 +48,7 @@ Shading is Schlick fresnel between a dark body colour and the reflected sky cube
 ### 1. Validate and review the night environment
 
 - Repeat Release/Debug builds, CPU tests and the graphics smoke test after future renderer changes; the 2026-11-07 local checks passed.
-- Check mouse capture, resize/minimize behaviour, camera speed, `[`/`]` light rotation and `P` wireframe.
+- Check mouse capture, resize/minimize behaviour, camera speed, `[`/`]` light rotation, `R` reflections and `P` wireframe.
 - Review the mountain silhouettes, peak sharpness, facet size and palette before adding other scene objects. Check the mesh from multiple camera angles for cracks or reversed faces, and inspect the fog transition when looking toward or moving near the outer terrain.
 - Review the lake: shoreline shape from the air and from the bank, wave scale, how much of the bed shows through, the highlight as `[` / `]` sweep it, and the view from under the surface.
 - Extend the automated camera-view and missing-face checks with interactive review of sky seams, reflection and fog; mismatched-face diagnostics remain to be exercised.
@@ -64,17 +68,17 @@ Shading is Schlick fresnel between a dark body colour and the reflected sky cube
 
 - Reintroduce the aurora prototype as separate animated 3D ribbons above the lake; keep it independent of the static star cubemap. Tune ribbon placement, vertical fades, noise frequencies and colour transitions against the night sky. Restore arrow-key controls with the shader feature.
 - Add the Catmull-Rom camera glide and its aurora-intensity ramp. Manual camera input should have a clearly defined effect on glide mode.
-- Add time pause and on-screen help. Keep the README, terminal help and on-screen controls consistent; inactive future bindings should stay marked as planned.
+- Extend the existing animation pause to the new animated objects and add on-screen help. Keep the README, terminal help and on-screen controls consistent; inactive future bindings should stay marked as planned.
 - Decide whether mouse-drag moon control and ImGui are useful after the core controls are complete.
 
 ### 4. Implement and verify stretch goals
 
-Choose at least two completed, demonstrable goals rather than starting all three at once.
+Planar reflection is implemented for the current landscape. Complete and demonstrate at least two goals, extending the reflection pass as new objects are introduced.
 
 | Goal | Suggested implementation | Acceptance check |
 |---|---|---|
 | Lake waves | Grid displacement or animated normals, with coherent normal calculation | Presets visibly change wave strength; highlights move smoothly; time pause freezes waves. |
-| Planar reflection | Resize-aware framebuffer, mirrored camera, above-water clip plane, projective sampling | A moving object and aurora are mirrored correctly; `R` toggles the pass; resize and grazing views remain correct. |
+| Planar reflection | Implemented for terrain, shore and sky: resize-aware framebuffer, mirrored camera, above-water clip plane, projective sampling and `R` toggle | Review resize, grazing views and shoreline alignment on team machines. When a moving object and aurora are introduced, include them in the capture and verify their reflected animation. |
 | Instanced pines | Shared mesh, static per-instance matrices and divisors, terrain height/slope sampling | One instanced draw per tree mesh/material; trees stay above water and out of steep slopes; compare FPS before/after. |
 
 ### 5. Submission and evidence

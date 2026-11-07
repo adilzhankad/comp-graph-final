@@ -27,7 +27,7 @@ void printHelp() {
     std::cout << "\nMountain Lake & Aurora - low-poly terrain\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
         << "Tab capture/release mouse | [ / ] light direction | T pause waves\n"
-        << "P wireframe | H console help | Esc quit. Current scene: terrain, starry sky and lake.\n"
+        << "P wireframe | R reflections | H console help | Esc quit. Current scene: terrain, starry sky and lake.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
@@ -151,6 +151,7 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         switch (key) {
         case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
+        case GLFW_KEY_R: state.scene.reflections = !state.scene.reflections; break;
         case GLFW_KEY_T: state.paused = !state.paused; break;
         case GLFW_KEY_H: printHelp(); break;
         case GLFW_KEY_TAB:

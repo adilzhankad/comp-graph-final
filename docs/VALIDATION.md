@@ -1,6 +1,59 @@
 ﻿# Terrain, lake and starry-sky validation
 
-Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
+Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze and planar landscape reflections. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
+
+## Planar mountain and shore reflections — 2026-11-07
+
+The lake now samples a separate terrain/sky pass rendered from a camera mirrored
+across `y = -1`. Underwater terrain is clipped; the lake is excluded from its own
+reflection. Ripple-driven projective UVs distort the capture, with smaller
+offsets at grazing angles and texture edges. Reflected terrain already contains
+distance fog, so that fog is not applied a second time by the water shader.
+`R` toggles between this pass and the preceding sky-only reflection.
+
+Release and Debug application builds and four-frame graphics smoke tests passed
+on Intel Iris Xe, OpenGL 3.3 / driver 32.0.101.6913. The temporary OpenGL harness
+checked the following without graphics errors:
+
+- RGBA8/depth24 allocation, linear/clamped sampling, unchanged-size reuse,
+  zero-size preservation, rejected over-limit resize preserving existing pixels,
+  and caller framebuffer/texture/renderbuffer/pixel-unpack bindings.
+- Reflections on/off from default, low, translated, 15-degree FOV and near-water
+  cameras. The default comparison changed 290,919 water pixels; upper sky and
+  terrain remained identical in the default and low views.
+- Underwater fallback produced identical on/off frames. Repeated fixed-time
+  captures were byte-identical; wireframe left the next filled frame unchanged.
+- Resizing from 1280x720 to a 797x449 viewport at offset (7, 9), then 1600x900,
+  with separate caller read/draw framebuffers. Framebuffer, viewport, clear colour,
+  clip, depth, blend, polygon and active texture state checks passed.
+
+Default, low and translated captures were reviewed for mirrored mountain shapes
+and shoreline alignment. `preview.png` shows the default view at time 3 seconds.
+The reflection target scales with the viewport within 1280x720. This pass adds
+a terrain draw; no new interactive FPS benchmark is claimed. The mesh remains
+flat and the waves affect shading and reflection coordinates. Future objects
+and aurora must be added to the capture when they enter the active scene.
+
+## Slightly taller mountains and rollback points — 2026-11-07
+
+`Terrain` now builds a shared adjusted height field before mesh generation.
+The source asset and its decoding remain unchanged; a smooth uplift above
+height 5 raises the highest field sample from 26.6588 to 32.0735 (about 20%).
+The 256x256-cell low-poly mesh and flat face normals are retained.
+
+The temporary OpenGL harness verified 151,199 low samples remain exactly
+unchanged, the submerged count stays 4,203, and 52,095 interpolated queries
+near the shoreline match the original field exactly. Water still has 780
+triangles. CPU terrain queries see the raised peaks. Default, low and downward
+captures were reviewed; no shoreline gaps or loss of the low-poly style were
+observed. Render state, paused frames and upper-sky invariance checks passed.
+Release and Debug previews passed their graphics smoke tests on Intel Iris Xe.
+
+Local checkpoints were saved before applying the uplift:
+`backup/terrain-original` at `f201ac3` preserves the original 128-cell mountains;
+`backup/terrain-before-height-increase` at `a26d505` preserves the denser mesh
+at its preceding height. The latter is also the current branch's committed
+checkpoint before this height change. `preview.png` shows the raised version.
 
 ## Finer low-poly terrain — 2026-11-07
 
@@ -34,7 +87,8 @@ The hidden-context harness passed time variation, exact pause, unchanged upper
 sky and render-state checks with no OpenGL errors. Default, low near-water and
 downward captures were reviewed. Release-context validation and the Debug
 application's smoke test passed. `preview.png` records this tuning at time 3.
-The reflection contains the sky only; planar terrain reflection remains planned.
+At this earlier stage the reflection contained the sky only; the later planar
+reflection pass is recorded above.
 
 ## Irregular wind ripples — 2026-11-07
 

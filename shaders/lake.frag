@@ -1,11 +1,16 @@
 #version 330 core
 in vec3 vPosition;
+in vec4 vReflectionClip;
 uniform vec3 uCameraPosition;
 uniform vec3 uLightDirection;
 uniform vec3 uFogColor;
 uniform float uTerrainHalfSize;
 uniform float uTime;
 uniform samplerCube uSkybox;
+uniform sampler2D uReflection;
+uniform int uHasReflection;
+uniform mat4 uView;
+uniform mat4 uProjection;
 out vec4 fragColor;
 
 // Directional gravity-wave spectrum: long undulations, wind ripples, then
@@ -108,6 +113,33 @@ vec3 sky(vec3 direction) {
     return mix(uFogColor, night, smoothstep(0.0, 0.22, direction.y));
 }
 
+vec3 reflectedScene(vec3 n, vec3 v) {
+    vec3 reflectedRay = reflect(-v, n);
+    vec3 fallback = sky(reflectedRay);
+    if (uHasReflection == 0) return fallback;
+
+    vec2 uv = vReflectionClip.xy / max(vReflectionClip.w, 0.0001) * 0.5 + 0.5;
+    float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    // Distort by the change in reflected ray, not the absolute view normal:
+    // a flat surface then joins the shoreline without an arbitrary UV shift.
+    vec3 flatRay = reflect(-v, vec3(0.0, 1.0, 0.0));
+    vec3 rayDelta = reflectedRay - flatRay;
+    // The target camera includes the reflection about the horizontal plane.
+    vec2 rayChange = (mat3(uView) * vec3(rayDelta.x, -rayDelta.y, rayDelta.z)).xy;
+    vec2 distortion = rayChange * vec2(uProjection[0][0], uProjection[1][1]) * 0.025;
+    distortion *= smoothstep(0.0, 0.04, edge);
+    distortion *= mix(0.25, 1.0, smoothstep(0.0, 0.25, abs(v.y)));
+    vec2 texel = 1.0 / vec2(textureSize(uReflection, 0));
+    // Fade large offsets smoothly before they can sample beyond the target,
+    // including at narrow camera FOVs; avoid stretching its edge texels.
+    vec2 margin = max(min(uv, vec2(1.0) - uv) - texel * 0.5, vec2(0.0));
+    distortion *= margin / (margin + abs(distortion) + vec2(0.000001));
+    vec2 sampleUV = clamp(uv + distortion, texel * 0.5, vec2(1.0) - texel * 0.5);
+    vec3 reflected = texture(uReflection, sampleUV).rgb;
+    float valid = step(0.0001, vReflectionClip.w) * step(0.0, edge);
+    return mix(fallback, reflected, valid);
+}
+
 void main() {
     vec3 n = rippleNormal(vPosition.xz, uTime);
     vec3 v = normalize(uCameraPosition - vPosition);
@@ -125,16 +157,16 @@ void main() {
     // Schlick's approximation: water turns mirror-like at grazing angles.
     float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
     // Artistic reflection floor: retain the angular Fresnel response while
-    // making the starry sky visible across more of the lake, including nearby.
+    // making the reflected landscape visible across more of the lake.
     float reflectionWeight = mix(0.20, 1.0, fresnel);
-    vec3 color = mix(body, sky(reflect(-v, n)), reflectionWeight);
-
     // Shallow water shows the bed through it; a grazing view hides it.
     float alpha = mix(0.82, 0.98, fresnel);
-    // Same fade as terrain.frag, so shore and water reach the background together.
+    // The reflected terrain already contains fog along the mirrored sightline.
+    // Fog the water body separately instead of fading the mountains twice.
     float distanceFog = smoothstep(95.0, 230.0, length(uCameraPosition - vPosition));
     float edge = max(abs(vPosition.x), abs(vPosition.z));
     float edgeFog = smoothstep(uTerrainHalfSize - 75.0, uTerrainHalfSize - 20.0, edge);
     float fog = 1.0 - (1.0 - distanceFog) * (1.0 - edgeFog);
-    fragColor = vec4(mix(color, uFogColor, fog), mix(alpha, 1.0, fog));
+    vec3 color = mix(mix(body, uFogColor, distanceFog), reflectedScene(n, v), reflectionWeight);
+    fragColor = vec4(mix(color, uFogColor, edgeFog), mix(alpha, 1.0, fog));
 }

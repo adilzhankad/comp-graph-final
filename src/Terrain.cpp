@@ -1,13 +1,37 @@
 #include "Terrain.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace mla {
+namespace {
+
+Heightmap mountainHeights(const std::filesystem::path& path) {
+    const Heightmap source(path);
+    std::vector<float> samples;
+    samples.reserve(static_cast<std::size_t>(source.width()) * source.depth());
+    for (int z = 0; z < source.depth(); ++z) {
+        for (int x = 0; x < source.width(); ++x) {
+            const float height = source.sample(x, z);
+            // Lift upper slopes and summits by about 20%, easing into the
+            // foothills. Everything at/below 5 stays exact, including the lake.
+            const float shoulder = glm::smoothstep(5.0f, 12.0f, height);
+            const float uplift = 0.25f * std::max(height - 5.0f, 0.0f) * shoulder;
+            samples.push_back(height + uplift);
+        }
+    }
+    // Store the adjusted field so rendering, height queries and lake coverage
+    // all use the same surface; the source asset and its encoding stay intact.
+    return Heightmap(source.width(), source.depth(), std::move(samples), source.worldSize());
+}
+
+} // namespace
 
 Terrain::Terrain(const std::filesystem::path& heightmap)
-    : heights_(heightmap), mesh_(makeMesh(heights_)) {}
+    : heights_(mountainHeights(heightmap)), mesh_(makeMesh(heights_)) {}
 
 Mesh Terrain::makeMesh(const Heightmap& heights) {
     // Halve the former 4.375-unit cell width for finer mountain silhouettes.
