@@ -1,4 +1,5 @@
 #version 330 core
+#include "beacon.glsl"
 in vec3 vPosition;
 in vec4 vReflectionClip;
 uniform vec3 uCameraPosition;
@@ -152,6 +153,12 @@ void main() {
     body += vec3(0.004, 0.009, 0.012) * max(dot(n, l), 0.0);
     // A softer, restrained moonlight lobe shares the landscape's muted palette.
     body += vec3(0.38, 0.48, 0.58) * pow(max(dot(n, h), 0.0), 112.0) * 0.7;
+    // The lighthouse beam reaches the water from above and leaves the same
+    // narrow glitter the moon does, from a point that keeps moving.
+    vec3 toLamp;
+    vec3 beacon = beaconLight(vPosition, toLamp);
+    body += beacon * 0.06 * max(dot(n, toLamp), 0.0);
+    body += beacon * pow(max(dot(n, normalize(toLamp + v)), 0.0), 112.0) * 0.8;
     body = pow(max(body, vec3(0.0)), vec3(1.0 / 2.2));
 
     // Schlick's approximation: water turns mirror-like at grazing angles.
@@ -168,5 +175,12 @@ void main() {
     float edgeFog = smoothstep(uTerrainHalfSize - 75.0, uTerrainHalfSize - 20.0, edge);
     float fog = 1.0 - (1.0 - distanceFog) * (1.0 - edgeFog);
     vec3 color = mix(mix(body, uFogColor, distanceFog), reflectedScene(n, v), reflectionWeight);
+    // The pool of light the beam leaves on the surface, added after the
+    // reflection mix: far water is nearly a mirror there, and a mirror would
+    // swallow the scattered light exactly where the beam is brightest. The
+    // ripples spread it over a wide angle, so it reads as a pool and not as a
+    // second highlight.
+    float scatter = pow(max(dot(n, normalize(toLamp + v)), 0.0), 24.0);
+    color += beacon * (0.04 + 0.45 * scatter) * (1.0 - distanceFog);
     fragColor = vec4(mix(color, uFogColor, edgeFog), mix(alpha, 1.0, fog));
 }

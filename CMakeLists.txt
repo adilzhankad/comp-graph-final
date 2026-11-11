@@ -22,7 +22,8 @@ target_include_directories(mla_glm SYSTEM INTERFACE external/glm)
 add_library(mla_image STATIC src/ImageLoader.cpp)
 target_include_directories(mla_image SYSTEM PUBLIC external/stb)
 
-add_library(mla_core STATIC src/Camera.cpp src/SceneNode.cpp src/Heightmap.cpp)
+add_library(mla_core STATIC src/Camera.cpp src/SceneNode.cpp src/Heightmap.cpp
+    src/Beacon.cpp)
 target_include_directories(mla_core PUBLIC src)
 target_link_libraries(mla_core PUBLIC mla_glm mla_image)
 
@@ -30,7 +31,8 @@ add_executable(MountainLakeAurora
     src/main.cpp src/Shader.cpp src/Mesh.cpp src/Terrain.cpp
     src/Lake.cpp src/Scene.cpp
     src/Texture.cpp
-    src/Skybox.cpp src/ReflectionTarget.cpp)
+    src/Skybox.cpp src/ReflectionTarget.cpp
+    src/Primitives.cpp src/Lighthouse.cpp)
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
 target_compile_definitions(MountainLakeAurora PRIVATE GLFW_INCLUDE_NONE NOMINMAX)
 set_property(TARGET MountainLakeAurora PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MountainLakeAurora>")

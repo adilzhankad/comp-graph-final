@@ -1,6 +1,6 @@
-﻿# Terrain, lake and starry-sky validation
+﻿# Terrain, lake, starry-sky and lighthouse validation
 
-Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze and planar landscape reflections. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
+Updated 2026-11-11. The current scene renders the low-poly terrain, the lake and the starry skybox with matching blue night haze and planar landscape reflections, and the lighthouse whose beam turns over them. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. The remaining prop modules are also deferred.
 
 ## Planar mountain and shore reflections — 2026-11-07
 
@@ -171,9 +171,9 @@ A lake capture was produced with `--smoke-test --capture` for this pass; the pre
 
 No performance benchmark is claimed for this pass either: the smoke test renders four frames and does not measure frame time. The FPS table in the README still needs a real measurement at 1280x720 on each team machine. Linux and macOS runtime, GitHub CI results and interactive exploration remain team review tasks.
 
-## Skybox and textures (task 02, in progress)
+## Skybox and textures (task 02)
 
-Branch `feat/skybox-textures`. `Texture`, `Skybox`, `shaders/skybox.*` and the generated cubemap exist; they are not connected to `Scene` yet, because that waits for the render-pass split from task 01. Nothing below is an application run.
+Branch `feat/skybox-textures`. `Texture`, `Skybox`, `shaders/skybox.*` and the generated cubemap were written here; nothing below is an application run.
 
 | Check | Result |
 |---|---|
@@ -184,4 +184,25 @@ Branch `feat/skybox-textures`. `Texture`, `Skybox`, `shaders/skybox.*` and the g
 | Ownership | A moved-from `Skybox` (and its `Texture`) was destroyed without errors. A missing file throws `Cannot load texture <path>: can't fopen`. |
 | Asset size | Six 1024×1024 PNGs, about 680 KB in total. |
 
-Still to do: wire the pass into `Scene` after task 01, replace `sky()` in `lake.frag` with the cubemap sample, terrain grass/rock/snow textures, Release/Debug/ctest/smoke test on Windows, and screenshots from the application itself.
+**Superseded in part.** `feat/mountain-lake-foundation` had written its own skybox at the same paths and wired it into `Scene`, so the merge into `main` kept that one; these faces and this `Texture` wrapper stay in the tree, and the wrapper is still the one the terrain textures are meant to use. The team owns the decision of which module to keep long term.
+
+## Lighthouse and beacon pass
+
+Run on 2026-11-11, first on the lighthouse branch and then again after merging it with the night scene.
+
+| Check | Result |
+|---|---|
+| Windows x64 Release and Debug | Both builds passed with MSVC 19.51, CMake 4.4.3, no warnings under `/W4 /permissive-` |
+| CPU tests | Camera/hierarchy/beacon and heightmap suites passed in both configurations (2/2 each) |
+| Graphics check | Hidden-window smoke test passed in both configurations: all five shader programs compiled and linked, no OpenGL errors, frame not uniform |
+| GPU | NVIDIA GeForce RTX 3050, OpenGL 3.3.0 / driver 610.88, Windows 11 |
+| Lighthouse | 18 sections; foot dropped onto the terrain at `(29, -5)`, lamp at `(29.0, 17.6, -5.0)` as reported at start-up |
+| Shader includes | `#include "beacon.glsl"` resolved in the terrain, lake and object fragment shaders; a missing or malformed include fails the shader load with the including file named |
+| Second light | Verified by rendering a frame with the beam mesh suppressed: the beacon alone leaves a visible lit patch on the far bank, so the terrain and water response is the light and not the additive shaft |
+| Lit air clipped at the water | With the cone tilted down, fragments below `world::waterLevel` are discarded; without the clip the shaft was drawn straight through the lake, since the water writes no depth |
+| Beam phase | Integrated from the animation clock in the main loop, so `T` freezes the sweep and a speed change does not jump it |
+| In the reflection | The tower is drawn inside `renderEnvironment`, so the mirrored pass picks it up: the capture shows the tower and the lit bank in the water. The shaft itself is left out of that pass. |
+
+Re-tuned during the merge, against the night palette rather than the daylight one the beacon was first set against: the beacon colour down from `(3.40, 2.80, 1.80)` to `(1.30, 1.05, 0.68)`, the shaft alpha from `0.26/0.34` to `0.15/0.26`, and `object.frag` moved onto the terrain's moonlight and night ambient. `preview.png` is the current capture, taken with `--smoke-test --capture`.
+
+No performance benchmark is claimed for this pass: the smoke test renders four frames and does not measure frame time. Interactive checks remain a team review task - the `L` toggle, the `,` / `.` sweep speed, the shaft seen from behind the lamp and from under the water surface, and the view of the tower from the air.

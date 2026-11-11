@@ -12,6 +12,15 @@ glm::vec3 moonDirection(float angle) {
     return glm::normalize(glm::vec3(std::sin(angle), 0.85f, std::cos(angle) * .65f));
 }
 
+// The lighthouse stands on the low headland on the east bank, where the ground
+// is barely above the water and the shore curves away under the beam. It is
+// inside the starting camera's view, to the right of the valley.
+const glm::vec2 lighthouseAnchor{29.0f, -5.0f};
+// Turns the tower, and with it the phase the sweep starts from.
+constexpr float lighthouseYaw = -1.9f;
+// The colour of the lit air in the beam, brighter than the lamp's own material.
+const glm::vec3 beamColor{1.00f, 0.88f, 0.62f};
+
 // The caller may render into its own framebuffer/viewport. Restore both even
 // if shader setup throws, and do not leave clipping enabled for the main pass.
 struct ReflectionPassState {
@@ -39,13 +48,24 @@ struct ReflectionPassState {
 Scene::Scene(const std::filesystem::path& root)
     : terrain_(root / "assets/heightmaps/mountain_lake.pgm"),
       lake_(terrain_.heights()),
+      lighthouse_(terrain_.heights(), lighthouseAnchor, lighthouseYaw),
       skybox_(root / "assets/skybox/stars"),
       terrainShader_(root / "shaders/terrain.vert", root / "shaders/terrain.frag"),
       lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
-      skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag") {}
+      skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag"),
+      objectShader_(root / "shaders/object.vert", root / "shaders/object.frag"),
+      beamShader_(root / "shaders/beam.vert", root / "shaders/beam.frag") {}
+
+void Scene::applyBeacon(const Shader& shader, const Beacon& beacon) const {
+    shader.set("uBeaconPosition", beacon.position);
+    shader.set("uBeaconDirection", beacon.direction);
+    shader.set("uBeaconColor", beacon.color);
+    shader.set("uBeaconCone", beacon.cone);
+}
 
 void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection,
-                              glm::vec3 eye, glm::vec3 light, bool wireframe, bool clipWater) {
+                              glm::vec3 eye, glm::vec3 light, const Beacon& beacon,
+                              bool wireframe, bool clipWater) {
     const float halfSize = terrain_.heights().worldSize() * .5f;
 
     glEnable(GL_DEPTH_TEST);
@@ -65,8 +85,28 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
     terrainShader_.set("uTerrainHalfSize", halfSize);
     terrainShader_.set("uFogColor", background());
     terrainShader_.set("uLightDirection", light);
+    applyBeacon(terrainShader_, beacon);
     terrain_.draw();
+    // The tower stands clear of the water, so it needs no clip plane of its
+    // own: dropping the terrain's here keeps object.vert free of one.
     glDisable(GL_CLIP_DISTANCE0);
+
+    // One draw per section: each carries its own material, and its model matrix
+    // is already the product of its place in the tower and the node it hangs on.
+    objectShader_.use();
+    objectShader_.set("uView", view);
+    objectShader_.set("uProjection", projection);
+    objectShader_.set("uCameraPosition", eye);
+    objectShader_.set("uTerrainHalfSize", halfSize);
+    objectShader_.set("uFogColor", background());
+    objectShader_.set("uLightDirection", light);
+    applyBeacon(objectShader_, beacon);
+    for (const auto& part : lighthouse_.parts()) {
+        objectShader_.set("uModel", part.model);
+        objectShader_.set("uColor", part.color);
+        objectShader_.set("uEmission", part.emission);
+        part.mesh->draw();
+    }
 
     // Distant sky fills only untouched depth. Ignore camera translation and
     // keep the background filled even when the terrain is in wireframe mode.
@@ -89,6 +129,10 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     const auto projection = camera.projection(aspect);
     const auto light = moonDirection(settings.lightAngle);
     const float halfSize = terrain_.heights().worldSize() * .5f;
+    // The hierarchy is updated before anything reads a world matrix: the beam
+    // mesh, the lamp and the light the shaders get all come out of the same one.
+    lighthouse_.update(settings.beaconTurns);
+    const auto beacon = lighthouse_.beacon(settings.beacon);
 
     // Reflect world coordinates about y = waterLevel. Using V*M includes the
     // orientation reflection; projective water UVs need no additional Y flip.
@@ -116,10 +160,10 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         auto reflectedEye = camera.position;
         reflectedEye.y = 2.0f * world::waterLevel - camera.position.y;
-        renderEnvironment(reflectionView, projection, reflectedEye, light, false, true);
+        renderEnvironment(reflectionView, projection, reflectedEye, light, beacon, false, true);
     }
 
-    renderEnvironment(view, projection, camera.position, light, settings.wireframe, false);
+    renderEnvironment(view, projection, camera.position, light, beacon, settings.wireframe, false);
 
     // Transparent pass: the water reads the depth buffer so the ground clips
     // the shoreline, but writes none of its own, so nothing self-occludes.
@@ -139,10 +183,29 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     lakeShader_.set("uReflection", 1);
     lakeShader_.set("uHasReflection", reflectScene ? 1 : 0);
     lakeShader_.set("uReflectionVP", reflectionVP);
+    applyBeacon(lakeShader_, beacon);
     if (reflectScene) reflection_.bindColor(1);
     lake_.draw();
-
     glActiveTexture(GL_TEXTURE0);
+
+    // Additive pass, last: lit air only ever adds light. It still reads depth,
+    // so the mountains cut the beam off where it reaches them. The mirrored
+    // pass leaves it out: a reflected shaft would have to be sorted against the
+    // water it crosses, and the pool of light on the surface is already there.
+    if (settings.beacon) {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        beamShader_.use();
+        beamShader_.set("uModel", lighthouse_.beamModel());
+        beamShader_.set("uView", view);
+        beamShader_.set("uProjection", projection);
+        beamShader_.set("uCameraPosition", camera.position);
+        beamShader_.set("uTerrainHalfSize", halfSize);
+        beamShader_.set("uFogColor", background());
+        beamShader_.set("uBeamColor", beamColor);
+        beamShader_.set("uWaterLevel", world::waterLevel);
+        lighthouse_.beamMesh().draw();
+    }
+
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

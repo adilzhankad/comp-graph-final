@@ -6,3 +6,4 @@
 *.frag text eol=lf
 *.md text eol=lf
 *.pgm binary
+*.glsl text eol=lf
