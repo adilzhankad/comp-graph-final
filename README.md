@@ -30,7 +30,7 @@ Planned final scene: a real-time interactive landscape written in **C++** with *
 
 ## Status
 
-The current milestone is the **terrain, lake and starry sky**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces, holding a rippling lake beneath a night cubemap. The complete mountain-lake scene remains the final target.
+The current milestone is **aurora over the mountain lake**: a low-poly landscape with sharp peaks and clearly visible triangular faces, a rippling lake, a starry sky and soft animated aurora curtains. The complete mountain-lake scene remains the final target.
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
@@ -41,20 +41,21 @@ The current milestone is the **terrain, lake and starry sky**: a low-poly mounta
 - A lake basin carved into the valley floor, flooded to a fixed water level. The 780-triangle water surface covers only the submerged cells and is clipped against the ground by the depth test, so the shoreline follows the terrain exactly.
 - Transparent water with Schlick fresnel and an artistic reflection floor, per-fragment normals from 16 directional waves with evolving wind patches and wave packets, and a soft Blinn-Phong highlight that `[` / `]` sweep across the lake. Fine ripples are softened and subpixel ripples filtered to steady the reflected stars.
 - A starry skybox using six 1024×1024 cubemap faces reprojected from NASA SVS's Deep Star Maps panorama, with mipmaps and seamless cubemap filtering.
-- Planar reflections of the mountains, shore and sky, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
+- Three folded aurora curtains with fine vertical rays, bright lower edges, soft fading tips and slowly shifting green, teal and violet colour. The ribbons are separate animated 3D geometry.
+- Planar reflections of the mountains, shore, sky and animated aurora, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
-![Current low-poly terrain, lake and starry sky rendered by the application](docs/preview.png)
+![Mountain lake and aurora rendered by the application](docs/preview.png)
 
-This is an actual 1280×720 application capture of the night scene. Windows Release/Debug builds, CPU tests and graphics smoke tests passed; additional camera-view and render-state checks are recorded in [docs/VALIDATION.md](docs/VALIDATION.md). FPS benchmarking and interactive control review remain outstanding.
+The preview is an actual 1280×720 application capture. Build, graphics and camera-view evidence, with the scope of each check, is recorded in [docs/VALIDATION.md](docs/VALIDATION.md). Interactive control review and the team FPS benchmark remain outstanding.
 
-The aurora and prop prototype files are retained for later work, but are excluded from the current application build and scene. Aurora will remain separate animated 3D ribbon geometry, not part of the skybox texture. No aurora or campfire is rendered in this milestone. A single cool directional light suggests moonlight; the visible/movable moon setup and campfire remain planned. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
+Aurora is part of the application build and both the main and reflected scene. Prop prototypes remain deferred. A single cool directional light suggests moonlight; the visible/movable moon setup and campfire remain planned. The aurora emits visible colour and appears in the lake reflection, but does not add a second material light source. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
 
 | Milestone | What we show | Status |
 |---|---|---|
 | Team & topic registration | Topic name + every member in MS Teams | ☐ |
-| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake and starry sky implemented and locally validated; remaining objects deferred |
+| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake, starry sky and aurora implemented; validation scope is recorded below; remaining objects deferred |
 | Week 8 progress check | Lighting, textures, lake, aurora, interaction | ☐ |
 | Week 9 progress check | Almost finished project | ☐ |
 | Final submission (3 days before defense) | Tag `v1.0`, report PDF, slides, demo video | ☐ |
@@ -67,19 +68,19 @@ The aurora and prop prototype files are retained for later work, but are exclude
 
 - [ ] **Mountain terrain from a heightmap** — grayscale image → grid mesh, heights from pixel brightness, height/slope-based texturing (grass → rock → snow). The current low-poly mesh uses face normals; finite-difference normals remain available for height-field queries.
 - [ ] **Lake** — semi-transparent surface (alpha blending, drawn after opaque geometry) with strong Blinn-Phong specular highlights from the moon and the campfire. *Surface, transparency, ripples, fresnel and the directional highlight are implemented; the moon and campfire lights are not.*
-- [ ] **Aurora** — several curved quad ribbons with an animated colour shader (scrolling noise + sine waves, green → teal → purple gradient, additive blending).
+- [x] **Aurora** — three folded 3D curtains with procedural vertical rays, soft fades, flowing colour and additive emission; brightness, speed and visibility controls.
 - [x] **Starry skybox** — night cubemap with matching horizon haze and sky reflection in the lake; locally validated in Release and Debug.
 - [ ] **Campfire point light** — warm, flickering, with distance attenuation.
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
-- [x] **Real reflection in the lake** — the current terrain, shore and sky render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. Future props and aurora still need integration into that pass.
+- [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. Future props still need integration into that pass.
 - [ ] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
 - [ ] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
 
 ### Extra polish (only if time allows)
 
-- [ ] Aurora light reflected in the lake as a coloured tint.
+- [x] Animated aurora colour reflected in the lake through the planar scene capture.
 - [x] Distance fog / mountain haze, including an outer band that obscures the terrain boundary.
 - [ ] Campfire spark particles.
 - [ ] Dear ImGui panel with all scene parameters.
@@ -91,11 +92,11 @@ The aurora and prop prototype files are retained for later work, but are exclude
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake and skybox are active; the remaining objects are deferred. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox and aurora are active; the remaining objects are deferred. |
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices and reusable scene-node code; no parent–child object group in the active scene yet. |
 | R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Flat terrain faces with ambient and directional diffuse lighting; per-fragment fresnel and Blinn-Phong specular on the water from the same movable light. A second light source and the final material shading are deferred. |
-| R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours and a mipmapped night cubemap used by the sky and water. Terrain/prop textures and aurora integration remain. |
-| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, wave pause, reflection toggle, wireframe and mouse capture. Other scene controls are inactive. |
+| R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, a mipmapped night cubemap and procedural aurora. Terrain/prop textures remain. |
+| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, aurora visibility/brightness/speed, animation pause, reflection toggle, wireframe and mouse capture. Prop controls remain inactive. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
 | R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies; clean isolated-source Windows Release/Debug builds and tests passed. Fresh-clone and cross-platform validation remain. |
 
@@ -103,7 +104,7 @@ The aurora and prop prototype files are retained for later work, but are exclude
 
 ## Controls
 
-These controls apply to the current terrain, lake and starry-sky scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
+These controls apply to the current mountain-lake and aurora scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
 
 | Key / input | Action |
 |---|---|
@@ -113,14 +114,17 @@ These controls apply to the current terrain, lake and starry-sky scene. `H` prin
 | Mouse wheel | Zoom (field of view) |
 | `Left Shift` | Move faster |
 | `[` / `]` | Rotate the directional light: inspect mountain faces and sweep the highlight across the lake |
-| `T` | Pause / resume the animation clock, freezing the waves |
+| `U` | Toggle aurora visibility |
+| `Up` / `Down` | Increase / decrease aurora brightness (0–200%) |
+| `Left` / `Right` | Decrease / increase aurora speed (0.1–2.5×) |
+| `T` | Pause / resume both waves and aurora animation |
 | `R` | Toggle planar scene reflections; off uses the earlier sky-only reflection |
 | `P` | Wireframe on / off |
 | `H` | Print current controls to the terminal; on-screen help is planned |
 | `Tab` | Release / capture the mouse |
 | `Esc` | Quit |
 
-Planned bindings for later milestones are `G` for cinematic glide, arrow keys for aurora intensity/speed, `F` for the campfire, `M` + mouse drag for the moon, and `1`/`2`/`3` for wave presets. They have no action in the current scene. On-screen help is also deferred.
+Planned bindings for later milestones are `G` for cinematic glide, `F` for the campfire, `M` + mouse drag for the moon, and `1`/`2`/`3` for wave presets. They have no action in the current scene. On-screen help is also deferred.
 
 ---
 
@@ -206,7 +210,7 @@ comp-graph-final/
 │   ├── Mesh.h/.cpp       # owning VAO/VBO/EBO wrapper, indexed draw
 │   ├── Camera.h/.cpp     # fly camera, frame-rate independent movement
 │   ├── SceneNode.h/.cpp  # scene graph: local transform, children, world matrix
-│   ├── Scene.h/.cpp      # reflection, terrain, skybox and lake passes
+│   ├── Scene.h/.cpp      # reflection, terrain, skybox, aurora and lake passes
 │   ├── ReflectionTarget.h/.cpp # owning colour/depth framebuffer, safe resize
 │   ├── World.h           # scene constants shared by renderer, generator and tests
 │   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
@@ -214,13 +218,13 @@ comp-graph-final/
 │   ├── Terrain.h/.cpp    # coarse irregular grid and flat triangle normals
 │   ├── Lake.h/.cpp       # independent coarse water grid restricted to the basin
 │   ├── Skybox.h/.cpp     # owning cubemap and cube mesh, image validation
-│   ├── Aurora.h/.cpp     # deferred prototype, excluded from the application build
+│   ├── Aurora.h/.cpp     # separate folded 3D curtain meshes
 │   └── Primitives.h/.cpp # deferred prop geometry, excluded from the application build
 ├── shaders/
 │   ├── terrain.vert / terrain.frag
 │   ├── lake.vert    / lake.frag
 │   ├── skybox.vert  / skybox.frag
-│   ├── aurora.vert  / aurora.frag    # deferred prototype
+│   ├── aurora.vert  / aurora.frag    # animated folds, rays and colour
 │   └── object.vert  / object.frag    # deferred prop prototype
 ├── assets/
 │   ├── heightmaps/       # bundled reproducible starter heightmap
@@ -240,18 +244,16 @@ Rule of thumb for D2: one class per concept, no application source file over ~50
 
 ## Technical notes
 
-The active renderer first captures terrain and sky from a camera mirrored across the lake. It then performs the main opaque terrain pass with flat lighting, a skybox pass, and a blended water pass that samples the reflection. The terrain, skybox and lake sections below describe this implementation; the other scene sections preserve the **planned final design** for later milestones.
+The active renderer first captures terrain, sky and aurora from a camera mirrored across the lake. It then draws the main terrain with flat lighting, the skybox, additive aurora and the blended lake sampling the reflection. Terrain, skybox, aurora and lake sections below describe this implementation; the remaining scene sections preserve the **planned final design** for later milestones.
 
-### Planned final render order per frame
+### Render order per frame
 
-Steps 1–4 are implemented for the terrain, skybox and lake. Other objects and the final UI remain planned.
-
-1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, render terrain and sky into a framebuffer. Trees, campfire and aurora will join this pass when integrated.
-2. **Opaque pass: terrain**, trees, campfire, tent, boat.
-3. **Skybox** (depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled).
-4. **Lake — alpha blending, depth write off.**
-5. Aurora — additive blending (`GL_SRC_ALPHA, GL_ONE`), depth write off, so it glows over the stars.
-6. UI (FPS, help, ImGui).
+1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, then render terrain, sky and additive aurora into a framebuffer.
+2. **Opaque terrain pass:** flat lighting and depth writes enabled. Future trees, campfire, tent and boat will join this pass.
+3. **Skybox:** depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled.
+4. **Aurora:** additive emission (`GL_ONE, GL_ONE`) with depth writes disabled; the terrain depth occludes the curtains. The shader outputs colour already weighted by intensity and fades.
+5. **Lake:** alpha blending with depth writes disabled, sampling the reflected scene.
+6. Future on-screen UI; current FPS and aurora settings appear in the window title.
 
 ### Terrain from a heightmap
 
@@ -293,18 +295,15 @@ The sky uses NASA SVS's [Deep Star Maps](https://svs.gsfc.nasa.gov/3895/) celest
 
 `Skybox` owns the texture and cube mesh, validates equal square face dimensions, and generates mipmaps. The vertex shader removes camera translation and places the cube at far depth. The scene draws it behind opaque terrain with `GL_LEQUAL` and no depth writes, then restores the water pass's depth state. The sky remains filled in wireframe mode.
 
-The fragment shader adds a dark blue atmosphere and fades the star map into `uFogColor` near and below the horizon. The terrain and water share that fog colour. The planar reflection pass draws this same sky behind the mirrored mountains; direct cubemap sampling remains the fallback when scene reflections are disabled or the camera is below the water. Aurora is not baked into the star map.
+The fragment shader adds a dark blue atmosphere and fades the star map into `uFogColor` near and below the horizon. Faint stars are subdued to leave room for the aurora; the lake's cubemap fallback uses the same colour and contrast. The terrain and water share that fog colour. The planar reflection pass draws this same sky behind the mirrored mountains; direct cubemap sampling remains the fallback when scene reflections are disabled or the camera is below the water. Aurora is not baked into the star map.
 
-### Aurora shader (planned integration)
+### Aurora shader
 
-- **Geometry:** each ribbon is a strip of quads along a curve (Catmull-Rom or sine path) high above the lake; `v` runs from the bottom edge to the top edge, `u` along the ribbon.
-- **Vertex shader:** sways the ribbon sideways with `sin(u·k + time·speed)`.
-- **Fragment shader:**
-  - vertical curtain streaks: scrolling 1D/2D value noise in `u` and time;
-  - vertical fade: bright, sharp lower edge, soft top — `smoothstep` on `v`;
-  - colour gradient by `v`: green at the bottom → teal → purple/pink at the top;
-  - output alpha = intensity uniform × streaks × fade, drawn with additive blending.
-- **Uniforms:** `uTime`, `uIntensity`, `uSpeed` — changed by keys, and ramped up automatically during the glide for the wow moment.
+Three separate 3D ribbon meshes form asymmetric curtains above the mountains. Vertex animation moves their folds; the fragment shader combines fine vertical rays, brighter lower edges and fading upper tips. Green, teal and violet colour varies along each curtain and over time, so the light changes locally rather than cycling the whole sky through one colour.
+
+The shader produces emissive colour for additive blending, with soft glow shaped inside the curtains. This pass uses no HDR framebuffer or bloom postprocess and does not illuminate terrain materials. Geometry depth keeps the light behind mountain silhouettes. The reflected pass uses the same meshes, shader and animation time, so lake ripples distort the actual coloured curtains.
+
+`U` toggles the aurora, arrow keys adjust brightness and speed, and `T` freezes both the waves and curtains. A separate accumulated aurora clock advances by `deltaTime × speed`, preserving animation phase when speed changes. The cinematic glide and its automatic intensity ramp remain planned.
 
 ### Lake
 
@@ -326,7 +325,7 @@ The muted blue-grey body colour shares the landscape's palette. Schlick fresnel 
 
 `ReflectionTarget` owns an RGBA8 colour texture and a 24-bit depth renderbuffer. It resizes with the drawable viewport, scaling both dimensions together to fit within 1280×720, and preserves the previous allocation if resizing fails. The reflected view is `V·M`, where `M` maps `y` to `2·waterLevel − y`. Terrain fragments below the water plane are clipped with `gl_ClipDistance[0]`; clipping is disabled for the sky. The reflected camera position supplies terrain fog distance, while world-space lighting stays unchanged. The lake itself is excluded from the capture.
 
-The lake projects its world position through the reflected view and projection: `uv = clip.xy / clip.w · 0.5 + 0.5`. No extra Y flip is needed because points on the water plane are unchanged by `M`. The difference between the rippled and flat reflected rays gives a small UV distortion, reduced near texture edges; a flat normal introduces no offset. The texture uses linear filtering and edge clamping. `R` disables this extra pass and uses the original cubemap reflection along `reflect(-v, n)` instead. That fallback also covers underwater views and invalid projected coordinates. Props and dynamic aurora will need to be added to the capture when they become active scene objects.
+The lake projects its world position through the reflected view and projection: `uv = clip.xy / clip.w · 0.5 + 0.5`. No extra Y flip is needed because points on the water plane are unchanged by `M`. The difference between the rippled and flat reflected rays gives a small UV distortion, reduced near texture edges; a flat normal introduces no offset. The texture uses linear filtering and edge clamping. `R` disables this extra pass and uses the original cubemap reflection along `reflect(-v, n)` instead. That fallback also covers underwater views and invalid projected coordinates. The same animated aurora is already included in this capture. Future props will need to be added when they become active scene objects.
 
 - *(stretch)* Waves: the same wave trains displacing a finer grid, so the silhouette moves as well as the highlights.
 
@@ -383,4 +382,4 @@ Required by the course rules; kept up to date during the project and copied into
 | Tool | What it was used for | What we changed / checked |
 |---|---|---|
 | Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. Later carved the lake basin into the heightmap generator and implemented the lake surface, its shader and the related tests and documentation. | _Team reviewed and edited the text; fill in further uses here._ Lake build, test and capture evidence is recorded in `docs/VALIDATION.md`. The team must review the water appearance and be able to explain the basin, the depth-test shoreline and the wave-normal derivation at the defense. |
-| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer, mirrored terrain/sky pass and projective water sampling; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |
+| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer and projective water sampling. Implemented folded aurora curtains, procedural rays and flowing colour, reflected animation and controls; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |

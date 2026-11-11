@@ -24,10 +24,11 @@ namespace {
 namespace fs = std::filesystem;
 
 void printHelp() {
-    std::cout << "\nMountain Lake & Aurora - low-poly terrain\n"
+    std::cout << "\nMountain Lake & Aurora - dancing lights over the lake\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
-        << "Tab capture/release mouse | [ / ] light direction | T pause waves\n"
-        << "P wireframe | R reflections | H console help | Esc quit. Current scene: terrain, starry sky and lake.\n"
+        << "Tab capture/release mouse | [ / ] light direction | T pause animation\n"
+        << "U aurora on/off | Up/Down aurora brightness | Left/Right aurora speed\n"
+        << "P wireframe | R reflections | H console help | Esc quit\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
@@ -152,6 +153,7 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
         case GLFW_KEY_R: state.scene.reflections = !state.scene.reflections; break;
+        case GLFW_KEY_U: state.scene.aurora = !state.scene.aurora; break;
         case GLFW_KEY_T: state.paused = !state.paused; break;
         case GLFW_KEY_H: printHelp(); break;
         case GLFW_KEY_TAB:
@@ -172,6 +174,10 @@ void updateInput(GLFWwindow* window, Input& state, float dt) {
                            down(GLFW_KEY_W) - down(GLFW_KEY_S)}, dt, down(GLFW_KEY_LEFT_SHIFT) > 0);
     }
     state.scene.lightAngle += dt * .5f * (down(GLFW_KEY_RIGHT_BRACKET) - down(GLFW_KEY_LEFT_BRACKET));
+    state.scene.auroraIntensity = std::clamp(state.scene.auroraIntensity +
+        dt * .4f * (down(GLFW_KEY_UP) - down(GLFW_KEY_DOWN)), 0.0f, 2.0f);
+    state.scene.auroraSpeed = std::clamp(state.scene.auroraSpeed +
+        dt * .3f * (down(GLFW_KEY_RIGHT) - down(GLFW_KEY_LEFT)), 0.1f, 2.5f);
 }
 
 std::vector<unsigned char> readFrame(int width, int height) {
@@ -202,6 +208,8 @@ int run(const Options& options, const char* executable) {
     std::cout << "OpenGL " << glGetString(GL_VERSION) << " | " << glGetString(GL_RENDERER)
               << "\nResources: " << resources.string() << '\n';
     Input state;
+    // Frame the tall aurora above the ridgeline while retaining the lake below.
+    state.camera.look(0.0f, 50.0f);
     attachInput(window.handle, state, options.smoke);
     mla::Scene scene(resources);
     std::cout << "Lake surface: " << scene.lake().triangleCount() << " triangles\n";
@@ -223,7 +231,9 @@ int run(const Options& options, const char* executable) {
             continue;
         }
         // A fixed step keeps the smoke test's frames reproducible.
-        state.scene.time += options.smoke ? 1.0f / 60.0f : (state.paused ? 0.0f : dt);
+        const float animationStep = options.smoke ? 1.0f / 60.0f : (state.paused ? 0.0f : dt);
+        state.scene.time += animationStep;
+        state.scene.auroraTime += animationStep * state.scene.auroraSpeed;
         glViewport(0, 0, width, height);
         const auto background = mla::Scene::background();
         glClearColor(background.r, background.g, background.b, 1.0f);
@@ -254,7 +264,11 @@ int run(const Options& options, const char* executable) {
         if (now - titleTime >= .5) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
-                  << titleFrames / (now - titleTime) << " FPS | Low-poly terrain and lake";
+                  << titleFrames / (now - titleTime) << " FPS | Aurora "
+                  << (state.scene.aurora ? "on" : "off") << " | Brightness "
+                  << std::setprecision(0) << state.scene.auroraIntensity * 100.0f << "% | Speed "
+                  << std::setprecision(1) << state.scene.auroraSpeed << "x"
+                  << (state.paused ? " | Paused" : "");
             glfwSetWindowTitle(window.handle, title.str().c_str());
             titleTime = now; titleFrames = 0;
         }

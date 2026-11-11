@@ -1,6 +1,45 @@
-﻿# Terrain, lake and starry-sky validation
+# Mountain lake and aurora validation
 
-Updated 2026-11-07. The current scene renders the low-poly terrain, lake and starry skybox with matching blue night haze and planar landscape reflections. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. Prop modules are also deferred.
+Updated 2026-11-11. The current scene renders low-poly terrain, a starry sky, three animated aurora curtains and a lake reflecting the landscape and aurora. Prop modules remain deferred.
+
+## Soft aurora curtains and flowing colour — 2026-11-11
+
+Three asymmetric 3D curtains use 320 columns and 20 rows each (38,400 triangles
+in total). Vertex deformation moves their folds; the fragment shader adds a
+continuous veil, filtered vertical rays, soft lower glow and fading violet/rose
+tips over green and teal. Colour waves travel independently across the curtains.
+Grazing-angle attenuation softens their silhouettes from both viewing cameras.
+The sky and the lake's cubemap fallback share a quieter star treatment. The
+starting view is tilted upward by five degrees to frame the taller curtains.
+
+| Check | Result |
+|---|---|
+| Windows x64 builds | Clean staged Release and Debug builds passed with MSVC 19.44 |
+| Existing CPU tests | Camera/hierarchy and heightmap tests passed, 2/2 in each configuration |
+| Application graphics smoke tests | Four hidden-window frames passed in Release and Debug; GLSL 330 compiled/linked, no OpenGL errors |
+| GPU | Intel Iris Xe Graphics, OpenGL 3.3 / driver 32.0.101.6913 |
+| Visible contribution | At time 0, toggling aurora changed 112,228 upper-sky pixels and 55,336 lower-frame lake pixels |
+| Animation and colour | Captures at times 0, 8, 20 and 40 changed in both sky and water; normalized emission RGB fractions also changed |
+| Reflected animation | Lake pixels changed when only the aurora clock advanced and the water clock stayed fixed |
+| Pause and intensity | Repeated frozen-time frames were byte-identical; zero intensity matched aurora disabled |
+| Render state | Framebuffer, viewport, depth, blend, clip, polygon and active-texture state checks passed; filled frames matched after wireframe and reflection toggles |
+| Views | Default, upward, low, near-water, translated, opposite and above-curtain views captured; default, upward, low, translated and above-curtain views visually reviewed |
+| High brightness | 200% intensity rendered correctly; some bright green/teal regions saturate in the existing LDR framebuffer |
+
+The standalone hidden-context harness passed in both configurations. Release
+serial CPU+GPU timing with `glFinish` (10 warmup frames, 40 measured frames) had
+a median of 6.01 ms with aurora and 3.22 ms without. Means were 10.11 and 4.17 ms;
+p95 was 43.98 and 7.18 ms, showing substantial scheduling/system-load outliers.
+This short diagnostic is not an interactive FPS benchmark or an isolated GPU
+shader cost measurement.
+
+`preview.png` records the actual application render at scene time 20. `U`
+toggles aurora, arrows adjust brightness/speed, and `T` pauses both clocks.
+The aurora clock accumulates `deltaTime * speed` so speed adjustments do not
+jump animation phase. The harness verifies rendering at fixed settings; live
+keyboard/mouse dispatch, cross-platform runtime and team-machine FPS remain
+interactive review tasks. Aurora is emissive geometry reflected in the lake;
+it does not yet light terrain materials or use a bloom postprocess.
 
 ## Planar mountain and shore reflections — 2026-11-07
 

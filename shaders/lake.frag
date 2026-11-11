@@ -108,8 +108,8 @@ vec3 rippleNormal(vec2 p, float t) {
 // so the stars and their reflection receive the same brightness and colour.
 vec3 sky(vec3 direction) {
     direction = normalize(direction);
-    vec3 stars = texture(uSkybox, direction).rgb;
-    vec3 night = vec3(0.008, 0.014, 0.032) + stars * vec3(0.75, 0.80, 0.90);
+    vec3 stars = pow(texture(uSkybox, direction).rgb, vec3(1.15));
+    vec3 night = vec3(0.008, 0.014, 0.032) + stars * vec3(0.50, 0.57, 0.70);
     return mix(uFogColor, night, smoothstep(0.0, 0.22, direction.y));
 }
 

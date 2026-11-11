@@ -42,10 +42,12 @@ Scene::Scene(const std::filesystem::path& root)
       skybox_(root / "assets/skybox/stars"),
       terrainShader_(root / "shaders/terrain.vert", root / "shaders/terrain.frag"),
       lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
-      skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag") {}
+      skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag"),
+      auroraShader_(root / "shaders/aurora.vert", root / "shaders/aurora.frag") {}
 
 void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection,
-                              glm::vec3 eye, glm::vec3 light, bool wireframe, bool clipWater) {
+                              glm::vec3 eye, glm::vec3 light, bool wireframe, bool clipWater,
+                              const SceneSettings& settings) {
     const float halfSize = terrain_.heights().worldSize() * .5f;
 
     glEnable(GL_DEPTH_TEST);
@@ -81,6 +83,23 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
     skybox_.bind(0);
     skybox_.draw();
     glDepthFunc(GL_LESS);
+
+    // Light adds through overlapping curtains without sorting or writing depth.
+    // Terrain depth still occludes it, including in the mirrored camera pass.
+    if (settings.aurora && settings.auroraIntensity > 0.0f) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        auroraShader_.use();
+        auroraShader_.set("uModel", glm::mat4(1.0f));
+        auroraShader_.set("uView", view);
+        auroraShader_.set("uProjection", projection);
+        auroraShader_.set("uCameraPosition", eye);
+        auroraShader_.set("uTime", settings.auroraTime);
+        auroraShader_.set("uSpeed", 1.0f);
+        auroraShader_.set("uIntensity", settings.auroraIntensity);
+        aurora_.draw();
+        glDisable(GL_BLEND);
+    }
     glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 }
 
@@ -116,10 +135,10 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         auto reflectedEye = camera.position;
         reflectedEye.y = 2.0f * world::waterLevel - camera.position.y;
-        renderEnvironment(reflectionView, projection, reflectedEye, light, false, true);
+        renderEnvironment(reflectionView, projection, reflectedEye, light, false, true, settings);
     }
 
-    renderEnvironment(view, projection, camera.position, light, settings.wireframe, false);
+    renderEnvironment(view, projection, camera.position, light, settings.wireframe, false, settings);
 
     // Transparent pass: the water reads the depth buffer so the ground clips
     // the shoreline, but writes none of its own, so nothing self-occludes.
