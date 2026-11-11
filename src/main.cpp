@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -26,8 +27,9 @@ namespace fs = std::filesystem;
 void printHelp() {
     std::cout << "\nMountain Lake & Aurora - low-poly terrain\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
-        << "Tab capture/release mouse | [ / ] light direction | T pause waves\n"
-        << "P wireframe | H console help | Esc quit. Current scene: terrain and lake.\n"
+        << "Tab capture/release mouse | [ / ] light direction | T pause waves and beam\n"
+        << "L lighthouse beacon on/off | , / . sweep slower/faster\n"
+        << "P wireframe | H console help | Esc quit. Scene: terrain, lake, lighthouse.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
@@ -152,6 +154,7 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
         case GLFW_KEY_T: state.paused = !state.paused; break;
+        case GLFW_KEY_L: state.scene.beacon = !state.scene.beacon; break;
         case GLFW_KEY_H: printHelp(); break;
         case GLFW_KEY_TAB:
             state.captured = !state.captured; state.firstMouse = true;
@@ -171,6 +174,10 @@ void updateInput(GLFWwindow* window, Input& state, float dt) {
                            down(GLFW_KEY_W) - down(GLFW_KEY_S)}, dt, down(GLFW_KEY_LEFT_SHIFT) > 0);
     }
     state.scene.lightAngle += dt * .5f * (down(GLFW_KEY_RIGHT_BRACKET) - down(GLFW_KEY_LEFT_BRACKET));
+    // Held, like the light direction. Zero is allowed: a stopped beam is the
+    // easiest way to look at where the light lands.
+    state.scene.beaconRpm = std::clamp(state.scene.beaconRpm +
+        dt * 3.0f * (down(GLFW_KEY_PERIOD) - down(GLFW_KEY_COMMA)), 0.0f, 12.0f);
 }
 
 std::vector<unsigned char> readFrame(int width, int height) {
@@ -203,7 +210,12 @@ int run(const Options& options, const char* executable) {
     Input state;
     attachInput(window.handle, state, options.smoke);
     mla::Scene scene(resources);
-    std::cout << "Lake surface: " << scene.lake().triangleCount() << " triangles\n";
+    const auto lamp = scene.lighthouse().lampPosition();
+    std::cout << "Lake surface: " << scene.lake().triangleCount() << " triangles\n"
+              << "Lighthouse: " << scene.lighthouse().parts().size()
+              << " sections, lamp at " << std::fixed << std::setprecision(1)
+              << lamp.x << ", " << lamp.y << ", " << lamp.z << '\n'
+              << std::defaultfloat;
     checkGraphicsErrors();
     printHelp();
     double previous = glfwGetTime(), titleTime = previous;
@@ -222,7 +234,13 @@ int run(const Options& options, const char* executable) {
             continue;
         }
         // A fixed step keeps the smoke test's frames reproducible.
-        state.scene.time += options.smoke ? 1.0f / 60.0f : (state.paused ? 0.0f : dt);
+        const float step = options.smoke ? 1.0f / 60.0f : (state.paused ? 0.0f : dt);
+        state.scene.time += step;
+        // The beam's phase is integrated rather than derived from the clock, so
+        // changing the speed cannot jump it. Whole turns are dropped, which
+        // keeps the number small however long the window stays open.
+        state.scene.beaconTurns = std::fmod(state.scene.beaconTurns +
+                                            step * state.scene.beaconRpm / 60.0f, 1.0f);
         glViewport(0, 0, width, height);
         const auto background = mla::Scene::background();
         glClearColor(background.r, background.g, background.b, 1.0f);
@@ -253,7 +271,7 @@ int run(const Options& options, const char* executable) {
         if (now - titleTime >= .5) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
-                  << titleFrames / (now - titleTime) << " FPS | Low-poly terrain and lake";
+                  << titleFrames / (now - titleTime) << " FPS | Terrain, lake and lighthouse";
             glfwSetWindowTitle(window.handle, title.str().c_str());
             titleTime = now; titleFrames = 0;
         }

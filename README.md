@@ -30,7 +30,7 @@ Planned final scene: a real-time interactive landscape written in **C++** with *
 
 ## Status
 
-The current milestone is the **terrain and the lake**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces, holding a rippling lake in its central valley. The complete mountain-lake scene remains the final target.
+The current milestone is the **terrain, the lake and the lighthouse**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces, holding a rippling lake in its central valley, with a lighthouse on the east bank whose beam turns over both. The complete mountain-lake scene remains the final target.
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
@@ -40,18 +40,20 @@ The current milestone is the **terrain and the lake**: a low-poly mountain lands
 - A lake basin carved into the valley floor, flooded to a fixed water level. The 780-triangle water surface covers only the submerged cells and is clipped against the ground by the depth test, so the shoreline follows the terrain exactly.
 - Transparent water with Schlick fresnel, per-fragment ripple normals from four analytic wave trains, and a narrow Blinn-Phong highlight that `[` / `]` sweep across the lake.
 - Smooth distance fog and an outer fog band blend the ground into the background before the mesh boundary; the water repeats the same fade.
+- A lighthouse on the shore, built from 18 low-poly sections and placed by sampling the terrain under it. Its lamp hangs under a scene node that turns, and the beam node under that aims the light down towards the water: one hierarchy drives the lamp, the cone of lit air and the light itself.
+- A second light source, and the first moving one: the beam is a spot light that sweeps the ground and the water, with the same cone the visible shaft is drawn with. `L` switches it off, `,` / `.` change how fast it turns, and `T` freezes it with the waves.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
-![Current low-poly terrain and lake rendered by the application](docs/preview.png)
+![The low-poly terrain, lake and lighthouse rendered by the application](docs/preview.png)
 
 This is an actual 1280×720 application capture. Validation results are recorded in [docs/VALIDATION.md](docs/VALIDATION.md).
 
-The aurora and prop prototype files are retained for later work, but are excluded from the current application build and scene. No aurora, skybox or campfire is rendered in this milestone, and the lake is still lit by the single directional light rather than the planned moon and campfire. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
+The aurora prototype is retained for later work, but is excluded from the current application build and scene. No aurora, skybox or campfire is rendered in this milestone, and the scene is still lit for daylight: the beacon is the planned campfire's stand-in as the second light, while the moon and the night palette are still to come. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
 
 | Milestone | What we show | Status |
 |---|---|---|
 | Team & topic registration | Topic name + every member in MS Teams | ☐ |
-| Week 7 progress check | Window, camera, terrain, first objects | Terrain art pass and the lake are in; remaining objects deferred |
+| Week 7 progress check | Window, camera, terrain, first objects | Terrain art pass, the lake and the lighthouse are in; remaining objects deferred |
 | Week 8 progress check | Lighting, textures, lake, aurora, interaction | ☐ |
 | Week 9 progress check | Almost finished project | ☐ |
 | Final submission (3 days before defense) | Tag `v1.0`, report PDF, slides, demo video | ☐ |
@@ -67,6 +69,7 @@ The aurora and prop prototype files are retained for later work, but are exclude
 - [ ] **Aurora** — several curved quad ribbons with an animated colour shader (scrolling noise + sine waves, green → teal → purple gradient, additive blending).
 - [ ] **Starry skybox** — night cubemap.
 - [ ] **Campfire point light** — warm, flickering, with distance attenuation.
+- [x] **Lighthouse with a turning beacon** — a tower on the shore built from solids of revolution, a lamp on a rotating scene node, a translucent cone of lit air, and a spot light that sweeps the terrain and the water. *Not in the original topic list: it was added because the scene needed a second, moving light and a parent–child object to drive it.*
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
@@ -88,11 +91,11 @@ The aurora and prop prototype files are retained for later work, but are exclude
 | # | Requirement | Final target | Current terrain milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain and lake are active; the remaining objects are deferred. |
-| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices and reusable scene-node code; no parent–child object group in the active scene yet. |
-| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Flat terrain faces with ambient and directional diffuse lighting; per-fragment fresnel and Blinn-Phong specular on the water from the same movable light. A second light source and the final material shading are deferred. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake and lighthouse are active; the remaining objects are deferred. |
+| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices, and a working **tower → lamp → beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
+| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong streak on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The moon, the night palette and terrain specular are deferred. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input and per-face terrain colours; textures, cubemap and aurora integration remain. |
-| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, wave pause, wireframe and mouse capture. Other scene controls are inactive. |
+| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, beacon toggle and sweep speed, wave and beam pause, wireframe and mouse capture. The aurora and moon controls are inactive. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
 | R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies and build/test commands; platform validation must be recorded. |
 
@@ -100,7 +103,7 @@ The aurora and prop prototype files are retained for later work, but are exclude
 
 ## Controls
 
-These controls apply to the current terrain and lake scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
+These controls apply to the current terrain, lake and lighthouse scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
 
 | Key / input | Action |
 |---|---|
@@ -110,7 +113,9 @@ These controls apply to the current terrain and lake scene. `H` prints help to t
 | Mouse wheel | Zoom (field of view) |
 | `Left Shift` | Move faster |
 | `[` / `]` | Rotate the directional light: inspect mountain faces and sweep the highlight across the lake |
-| `T` | Pause / resume the animation clock, freezing the waves |
+| `L` | Lighthouse beacon on / off: the beam, the light it casts and the glow of the lamp |
+| `,` / `.` | Sweep slower / faster, from stopped to 12 turns per minute |
+| `T` | Pause / resume the animation clock, freezing the waves and the sweep |
 | `P` | Wireframe on / off |
 | `H` | Print current controls to the terminal; on-screen help is planned |
 | `Tab` | Release / capture the mouse |
@@ -202,19 +207,23 @@ comp-graph-final/
 │   ├── Mesh.h/.cpp       # owning VAO/VBO/EBO wrapper, indexed draw
 │   ├── Camera.h/.cpp     # fly camera, frame-rate independent movement
 │   ├── SceneNode.h/.cpp  # scene graph: local transform, children, world matrix
-│   ├── Scene.h/.cpp      # current terrain and lake passes, directional light
+│   ├── Scene.h/.cpp      # one pass method per object, shared per-frame values
 │   ├── World.h           # scene constants shared by renderer, generator and tests
 │   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
 │   ├── ImageLoader.cpp   # the single stb_image implementation translation unit
 │   ├── Terrain.h/.cpp    # coarse irregular grid and flat triangle normals
 │   ├── Lake.h/.cpp       # water surface restricted to the submerged terrain cells
-│   ├── Aurora.h/.cpp     # deferred prototype, excluded from the application build
-│   └── Primitives.h/.cpp # deferred prop geometry, excluded from the application build
+│   ├── Lighthouse.h/.cpp # the tower, the turning lamp node and the beam cone
+│   ├── Beacon.h/.cpp     # the lamp as a spot light; no OpenGL, so it is tested
+│   ├── Primitives.h/.cpp # cube, cone, frustum and the hollow beam cone
+│   └── Aurora.h/.cpp     # deferred prototype, excluded from the application build
 ├── shaders/
 │   ├── terrain.vert / terrain.frag
 │   ├── lake.vert    / lake.frag
-│   ├── aurora.vert  / aurora.frag    # deferred prototype
-│   └── object.vert  / object.frag    # deferred prop prototype
+│   ├── object.vert  / object.frag    # the lighthouse, and props to come
+│   ├── beam.vert    / beam.frag      # the cone of lit air
+│   ├── beacon.glsl                   # the beacon falloff, included by the three above
+│   └── aurora.vert  / aurora.frag    # deferred prototype
 ├── assets/
 │   └── heightmaps/       # bundled reproducible starter heightmap
 ├── scripts/
@@ -231,17 +240,17 @@ Rule of thumb for D2: one class per concept, no application source file over ~50
 
 ## Technical notes
 
-The active renderer performs one opaque terrain pass with flat lighting, then one blended water pass. The terrain and lake sections below describe this implementation; the other scene sections preserve the **planned final design** for later milestones.
+The active renderer performs two opaque passes - the terrain, then the lighthouse - followed by the blended water and the additive beam. Each object owns one private method of `Scene`, and the view, projection, camera position, lights and fog they all need are gathered once per frame into a small `Frame` struct. The terrain, lake and lighthouse sections below describe this implementation; the other scene sections preserve the **planned final design** for later milestones.
 
 ### Planned final render order per frame
 
-Steps 2 and 4 are implemented, with only the terrain and the lake in them.
+Steps 2, 4 and 5 are implemented, with the terrain, the lighthouse, the lake and the beam in them.
 
 1. *(stretch)* Reflection pass: camera mirrored below the water plane, clip plane `y > waterLevel`, render terrain + trees + campfire + skybox + aurora into a framebuffer.
-2. **Opaque pass: terrain**, trees, campfire, tent, boat.
+2. **Opaque pass: terrain**, **lighthouse**, trees, campfire, tent, boat.
 3. Skybox (depth test `GL_LEQUAL`, depth written as 1.0).
 4. **Lake — alpha blending, depth write off.**
-5. Aurora — additive blending (`GL_SRC_ALPHA, GL_ONE`), depth write off, so it glows over the stars.
+5. **Beam** and aurora — additive blending (`GL_SRC_ALPHA, GL_ONE`), depth write off, so they glow over what is behind them while the mountains still cut them off.
 6. UI (FPS, help, ImGui).
 
 ### Terrain from a heightmap
@@ -302,6 +311,49 @@ Four trains with incommensurate directions and frequencies are summed. Shading m
 
 - *(stretch)* Reflection: screen-space projective UVs `uv = clip.xy / clip.w · 0.5 + 0.5`, flipped in Y, distorted slightly by the wave normal.
 - *(stretch)* Waves: the same wave trains displacing a finer grid, so the silhouette moves as well as the highlights.
+
+### Lighthouse and the turning beacon
+
+The tower stands at `(29, -5)` on the east bank, dropped onto the terrain by `Heightmap::heightAt` and clamped so that the plinth, which reaches below its own base, stays out of the water. It is 18 sections of `primitives::frustum`, a solid of revolution whose side normal is taken from the slant rather than from the triangle,
+
+```
+n_side = normalize( (cos a . h,  r_bottom - r_top,  sin a . h) )
+```
+
+so a section with one radius of zero still shades correctly. The lantern is an open cage of six posts instead of glass: the lamp inside stays visible and no transparent surface has to be sorted against the lake.
+
+Three nodes carry the animation, and only the middle one changes:
+
+```
+root  = T(x, ground, z) . R_y(yaw)              fixed: where the tower stands
+lamp  = T(0, lampHeight, 0) . R_y(2π . turns)   written once per frame
+beam  = R_x(tilt)                               fixed: 14 degrees nose-down
+```
+
+`SceneNode::updateWorld` propagates them, and everything the light is made of reads the result: the emissive lamp mesh and its reflector hang on `lamp`, while the cone of lit air and the spot light itself both come out of `beam.world` - its origin is the filament and its local **+z** is the direction the beam leaves. Nothing is aimed a second time, so the shaft, the lamp and the lit ground cannot drift apart.
+
+`turns` is integrated in the main loop from the animation clock, `turns = fmod(turns + dt . rpm / 60, 1)`, rather than derived from it: changing the speed with `,` / `.` then moves the beam on from where it stands instead of jumping it, and `T` freezes the sweep with the waves. Whole turns are dropped so the number stays small however long the window is open.
+
+**The light.** `src/Beacon.h` carries the four values the shaders need - position, direction, colour and `(cos θ_outer, cos θ_inner, range)` - and `shaders/beacon.glsl` turns them into light. The terrain, water and object shaders all `#include` that one file, which `Shader` resolves when it reads the source:
+
+```
+cone = smoothstep( cos θ_outer, cos θ_inner, dot(-l, beamAxis) )
+att  = 1 / (1 + k_l.d + k_q.d²)              k_l = 0.004, k_q = 0.00012
+fade = 1 - smoothstep( 0.75.range, range, d )
+I    = I_beacon . cone . att . fade
+```
+
+The constant term in the attenuation keeps the lamp from blowing out the gallery it stands on, and `fade` stops the light exactly where the drawn cone ends. The colour is set to zero while the beacon is off, so no shader needs a branch for the toggle.
+
+**The shaft.** The visible beam is a hollow cone - apex at the lamp, mouth at `range . tan θ_outer` - drawn last with additive blending, depth test on and depth writes off, so the mountains cut it where it reaches them. Both sides of the shell are drawn and add up to the depth of the air the line of sight crosses; the shell is brightest where it is seen edge-on, because that is where the ray stays inside the cone longest:
+
+```
+alpha = ( 0.26 . (0.22 + 0.78 . (1 - |n·v|)^1.5) . (1 - t)^1.8 + 0.34 . e^(-16t) ) . (1 - fog)
+```
+
+with `t` the fraction of the way from the apex to the mouth. Fragments below `world::waterLevel` are discarded: lit air stops at the surface, and what the beam does to the water is the lake shader's business.
+
+**On the water.** The beam adds the same two lobes the sun does, plus a broad scatter term of exponent 24 that is added *after* the fresnel mix rather than to the body colour. Far water is seen at a grazing angle, where fresnel turns it into a mirror and would swallow anything blended into the body - which is exactly where the pool of light is.
 
 ### Instanced pine trees *(stretch)*
 

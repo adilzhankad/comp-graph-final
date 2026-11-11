@@ -1,4 +1,5 @@
 #version 330 core
+#include "beacon.glsl"
 flat in vec3 vFaceNormal;
 flat in vec3 vFaceAnchor;
 in vec3 vPosition;
@@ -29,6 +30,11 @@ void main() {
     float skyFill = 0.5 + 0.5 * n.y;
     vec3 ambient = mix(vec3(0.13, 0.16, 0.18), vec3(0.30, 0.36, 0.40), skyFill);
     vec3 color = base * (ambient + vec3(0.95, 0.86, 0.70) * diffuse * 0.85);
+    // Second light: the lighthouse beam sweeping over the ground. The patch of
+    // light moves smoothly because the lamp distance is interpolated, while the
+    // face's own cosine term stays flat with the rest of the shading.
+    vec3 toLamp;
+    color += base * beaconLight(vPosition, toLamp) * max(dot(n, toLamp), 0.0);
     color = pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
     // Lighting stays flat per triangle; fog blends smoothly across the surface.
     float distanceFog = smoothstep(95.0, 230.0, length(uCameraPosition - vPosition));

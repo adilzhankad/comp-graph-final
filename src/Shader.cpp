@@ -12,7 +12,11 @@
 namespace mla {
 namespace {
 
-std::string readSource(const std::filesystem::path& path) {
+// GLSL has no include directive of its own, so `#include "name.glsl"` is
+// resolved here, relative to the including file. The light the terrain, the
+// water and the props all share then lives in one file instead of three copies.
+std::string readSource(const std::filesystem::path& path, int depth = 0) {
+    if (depth > 4) throw std::runtime_error("Shader includes nest too deeply: " + path.string());
     std::ifstream input(path, std::ios::binary);
     if (!input) throw std::runtime_error("Cannot open shader: " + path.string());
     std::ostringstream source;
@@ -22,7 +26,29 @@ std::string readSource(const std::filesystem::path& path) {
     if (result.empty()) throw std::runtime_error("Shader file is empty: " + path.string());
     // A UTF-8 BOM is not valid before GLSL's #version directive.
     if (result.compare(0, 3, "\xEF\xBB\xBF") == 0) result.erase(0, 3);
-    return result;
+    if (result.find("#include") == std::string::npos) return result;
+
+    const std::string directive = "#include \"";
+    std::istringstream lines(result);
+    std::ostringstream expanded;
+    std::string line;
+    while (std::getline(lines, line)) {
+        auto trimmed = line;
+        while (!trimmed.empty() && (trimmed.back() == '\r' || trimmed.back() == ' ')) trimmed.pop_back();
+        if (trimmed.rfind(directive, 0) != 0) {
+            expanded << line << '\n';
+            continue;
+        }
+        if (trimmed.size() <= directive.size() || trimmed.back() != '"') {
+            throw std::runtime_error("Malformed shader include in " + path.string() + ": " + trimmed);
+        }
+        const auto name = trimmed.substr(directive.size(), trimmed.size() - directive.size() - 1);
+        if (name.find("..") != std::string::npos) {
+            throw std::runtime_error("Shader include must stay in the shader folder: " + trimmed);
+        }
+        expanded << readSource(path.parent_path() / name, depth + 1) << '\n';
+    }
+    return expanded.str();
 }
 
 std::string shaderLog(GLuint shader) {

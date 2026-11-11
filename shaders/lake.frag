@@ -1,4 +1,5 @@
 #version 330 core
+#include "beacon.glsl"
 in vec3 vPosition;
 uniform vec3 uCameraPosition;
 uniform vec3 uLightDirection;
@@ -48,11 +49,24 @@ void main() {
     body += vec3(0.020, 0.062, 0.070) * max(dot(n, l), 0.0);
     // One narrow Blinn-Phong lobe: the sun leaves a long glittering streak.
     body += vec3(0.95, 0.86, 0.70) * pow(max(dot(n, h), 0.0), 180.0) * 3.2;
+    // The lighthouse beam reaches the water from above and leaves the same
+    // narrow glitter the sun does.
+    vec3 toLamp;
+    vec3 beacon = beaconLight(vPosition, toLamp);
+    body += beacon * 0.085 * max(dot(n, toLamp), 0.0);
+    body += beacon * pow(max(dot(n, normalize(toLamp + v)), 0.0), 180.0) * 1.8;
     body = pow(max(body, vec3(0.0)), vec3(1.0 / 2.2));
 
     // Schlick's approximation: water turns mirror-like at grazing angles.
     float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
     vec3 color = mix(body, sky(reflect(-v, n)), fresnel);
+    // The pool of light the beam leaves on the surface, added after that mix:
+    // the far water is seen at a grazing angle, where the fresnel term turns it
+    // into a mirror and would swallow anything blended into the body colour.
+    // The ripples scatter the beam back over a wide angle, so the pool is
+    // broad with a brighter core rather than one hard highlight.
+    float scatter = pow(max(dot(n, normalize(toLamp + v)), 0.0), 24.0);
+    color += beacon * (0.05 + 0.5 * scatter);
 
     // Shallow water shows the bed through it; a grazing view hides it.
     float alpha = mix(0.70, 0.97, fresnel);
