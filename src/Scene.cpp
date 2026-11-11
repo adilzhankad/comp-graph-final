@@ -1,27 +1,51 @@
 #include "Scene.h"
+#include "World.h"
 
 #include <glad/glad.h>
+#include <algorithm>
 #include <cmath>
 
 namespace mla {
 namespace {
 
-glm::vec3 sunDirection(float angle) {
+glm::vec3 moonDirection(float angle) {
     return glm::normalize(glm::vec3(std::sin(angle), 0.85f, std::cos(angle) * .65f));
 }
+
+// The caller may render into its own framebuffer/viewport. Restore both even
+// if shader setup throws, and do not leave clipping enabled for the main pass.
+struct ReflectionPassState {
+    GLint draw = 0, read = 0, viewport[4] = {};
+    GLfloat clearColor[4] = {};
+    GLboolean clip = GL_FALSE;
+    ReflectionPassState() {
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
+        glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read);
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+        clip = glIsEnabled(GL_CLIP_DISTANCE0);
+    }
+    ~ReflectionPassState() {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(draw));
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(read));
+        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        if (clip) glEnable(GL_CLIP_DISTANCE0); else glDisable(GL_CLIP_DISTANCE0);
+    }
+};
 
 } // namespace
 
 Scene::Scene(const std::filesystem::path& root)
     : terrain_(root / "assets/heightmaps/mountain_lake.pgm"),
       lake_(terrain_.heights()),
+      skybox_(root / "assets/skybox/stars"),
       terrainShader_(root / "shaders/terrain.vert", root / "shaders/terrain.frag"),
-      lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag") {}
+      lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
+      skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag") {}
 
-void Scene::render(const Camera& camera, float aspect, const SceneSettings& settings) {
-    const auto view = camera.view();
-    const auto projection = camera.projection(aspect);
-    const auto light = sunDirection(settings.lightAngle);
+void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection,
+                              glm::vec3 eye, glm::vec3 light, bool wireframe, bool clipWater) {
     const float halfSize = terrain_.heights().worldSize() * .5f;
 
     glEnable(GL_DEPTH_TEST);
@@ -29,17 +53,73 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
-    glPolygonMode(GL_FRONT_AND_BACK, settings.wireframe ? GL_LINE : GL_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+    if (clipWater) glEnable(GL_CLIP_DISTANCE0); else glDisable(GL_CLIP_DISTANCE0);
 
     terrainShader_.use();
     terrainShader_.set("uModel", glm::mat4(1.0f));
     terrainShader_.set("uView", view);
     terrainShader_.set("uProjection", projection);
-    terrainShader_.set("uCameraPosition", camera.position);
+    terrainShader_.set("uCameraPosition", eye);
+    terrainShader_.set("uClipHeight", world::waterLevel);
     terrainShader_.set("uTerrainHalfSize", halfSize);
     terrainShader_.set("uFogColor", background());
     terrainShader_.set("uLightDirection", light);
     terrain_.draw();
+    glDisable(GL_CLIP_DISTANCE0);
+
+    // Distant sky fills only untouched depth. Ignore camera translation and
+    // keep the background filled even when the terrain is in wireframe mode.
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    skyboxShader_.use();
+    skyboxShader_.set("uView", view);
+    skyboxShader_.set("uProjection", projection);
+    skyboxShader_.set("uSkybox", 0);
+    skyboxShader_.set("uFogColor", background());
+    skybox_.bind(0);
+    skybox_.draw();
+    glDepthFunc(GL_LESS);
+    glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+}
+
+void Scene::render(const Camera& camera, float aspect, const SceneSettings& settings) {
+    const auto view = camera.view();
+    const auto projection = camera.projection(aspect);
+    const auto light = moonDirection(settings.lightAngle);
+    const float halfSize = terrain_.heights().worldSize() * .5f;
+
+    // Reflect world coordinates about y = waterLevel. Using V*M includes the
+    // orientation reflection; projective water UVs need no additional Y flip.
+    glm::mat4 mirror(1.0f);
+    mirror[1][1] = -1.0f;
+    mirror[3][1] = 2.0f * world::waterLevel;
+    const auto reflectionView = view * mirror;
+    const auto reflectionVP = projection * reflectionView;
+    GLint viewport[4] = {};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const bool reflectScene = settings.reflections && camera.position.y > world::waterLevel + .02f &&
+                              viewport[2] > 0 && viewport[3] > 0;
+    if (reflectScene) {
+        // Preserve aspect at high-DPI resolutions, capping the extra pass at
+        // 1280x720. Small windows use their full drawable resolution.
+        const float scale = std::min({1.0f, 1280.0f / viewport[2], 720.0f / viewport[3]});
+        reflection_.resize(std::max(1, static_cast<int>(std::lround(viewport[2] * scale))),
+                           std::max(1, static_cast<int>(std::lround(viewport[3] * scale))));
+        const ReflectionPassState savedState;
+        reflection_.bind();
+        glViewport(0, 0, reflection_.width(), reflection_.height());
+        glDepthMask(GL_TRUE);
+        const auto fog = background();
+        glClearColor(fog.r, fog.g, fog.b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        auto reflectedEye = camera.position;
+        reflectedEye.y = 2.0f * world::waterLevel - camera.position.y;
+        renderEnvironment(reflectionView, projection, reflectedEye, light, false, true);
+    }
+
+    renderEnvironment(view, projection, camera.position, light, settings.wireframe, false);
 
     // Transparent pass: the water reads the depth buffer so the ground clips
     // the shoreline, but writes none of its own, so nothing self-occludes.
@@ -55,8 +135,14 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     lakeShader_.set("uFogColor", background());
     lakeShader_.set("uLightDirection", light);
     lakeShader_.set("uTime", settings.time);
+    lakeShader_.set("uSkybox", 0);
+    lakeShader_.set("uReflection", 1);
+    lakeShader_.set("uHasReflection", reflectScene ? 1 : 0);
+    lakeShader_.set("uReflectionVP", reflectionVP);
+    if (reflectScene) reflection_.bindColor(1);
     lake_.draw();
 
+    glActiveTexture(GL_TEXTURE0);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

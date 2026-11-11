@@ -1,105 +1,139 @@
 #include "Skybox.h"
 
+#include <stb_image.h>
+
 #include <array>
-#include <cstdint>
-#include <utility>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace mla {
 namespace {
 
-// Only positions: the interpolated position is the sampling direction, so
-// the sky needs no normals or UVs.
-constexpr std::array<float, 24> cubeCorners{
-    -1.0f, -1.0f, -1.0f,   1.0f, -1.0f, -1.0f,   1.0f, 1.0f, -1.0f,   -1.0f, 1.0f, -1.0f,
-    -1.0f, -1.0f,  1.0f,   1.0f, -1.0f,  1.0f,   1.0f, 1.0f,  1.0f,   -1.0f, 1.0f,  1.0f};
+constexpr std::array<const char*, 6> faceNames = {
+    "right.png", "left.png", "top.png", "bottom.png", "front.png", "back.png"
+};
 
-// Wound to face inwards, in case face culling is ever enabled.
-constexpr std::array<std::uint8_t, 36> cubeFaces{
-    0, 1, 2,  0, 2, 3,   // -Z
-    4, 6, 5,  4, 7, 6,   // +Z
-    0, 7, 4,  0, 3, 7,   // -X
-    1, 6, 2,  1, 5, 6,   // +X
-    0, 5, 1,  0, 4, 5,   // -Y
-    3, 6, 7,  3, 2, 6};  // +Y
+// The cube only supplies sampling directions. Its apparent distance is set to
+// the far depth by the vertex shader, independently of the camera far plane.
+constexpr float cubeVertices[] = {
+    -1, -1, -1,   1, -1, -1,   1,  1, -1,
+    -1, -1, -1,   1,  1, -1,  -1,  1, -1,
+     1, -1,  1,  -1, -1,  1,  -1,  1,  1,
+     1, -1,  1,  -1,  1,  1,   1,  1,  1,
+    -1, -1,  1,  -1, -1, -1,  -1,  1, -1,
+    -1, -1,  1,  -1,  1, -1,  -1,  1,  1,
+     1, -1, -1,   1, -1,  1,   1,  1,  1,
+     1, -1, -1,   1,  1,  1,   1,  1, -1,
+    -1,  1, -1,   1,  1, -1,   1,  1,  1,
+    -1,  1, -1,   1,  1,  1,  -1,  1,  1,
+    -1, -1,  1,   1, -1,  1,   1, -1, -1,
+    -1, -1,  1,   1, -1, -1,  -1, -1, -1
+};
 
-std::array<std::filesystem::path, 6> facePaths(const std::filesystem::path& root) {
-    const auto folder = root / "assets/skybox";
-    // OpenGL face order: +X, -X, +Y, -Y, +Z, -Z.
-    return {folder / "px.png", folder / "nx.png", folder / "py.png",
-            folder / "ny.png", folder / "pz.png", folder / "nz.png"};
-}
+// Construction can fail on any image. Restore the caller's upload/buffer state
+// both on success and while unwinding, before partially created objects die.
+struct UploadState {
+    GLint unpackAlignment = 4;
+    GLint texture = 0;
+    GLint vao = 0;
+    GLint arrayBuffer = 0;
+
+    UploadState() {
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
+        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &texture);
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+    }
+    ~UploadState() {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, static_cast<GLuint>(texture));
+        glBindVertexArray(static_cast<GLuint>(vao));
+        glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
+    }
+};
 
 } // namespace
 
-Skybox::Skybox(const std::filesystem::path& root)
-    : shader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag"),
-      cubemap_(Texture::loadCubemap(facePaths(root))) {
-    glGenVertexArrays(1, &vao_);
-    glGenBuffers(1, &vbo_);
-    glGenBuffers(1, &ebo_);
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeCorners), cubeCorners.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeFaces), cubeFaces.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+Skybox::Skybox(const std::filesystem::path& faceDirectory) {
+    try {
+        const UploadState savedState;
+        GLint maximumSize = 0;
+        glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &maximumSize);
+        glGenTextures(1, &texture_);
+        if (texture_ == 0) throw std::runtime_error("Cannot create skybox cubemap");
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture_);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // The sampler always reads the sky unit; set it once.
-    shader_.use();
-    shader_.set("uSky", TextureUnit::Sky);
+        int faceSize = 0;
+        for (std::size_t face = 0; face < faceNames.size(); ++face) {
+            const auto path = faceDirectory / faceNames[face];
+            int width = 0, height = 0, channels = 0;
+            using Image = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
+            Image pixels(stbi_load(path.string().c_str(), &width, &height, &channels, 3),
+                         stbi_image_free);
+            if (!pixels) {
+                const char* reason = stbi_failure_reason();
+                throw std::runtime_error("Cannot load skybox face: " + path.string() +
+                                         (reason ? " (" + std::string(reason) + ")" : ""));
+            }
+            if (width <= 0 || width != height || (face != 0 && width != faceSize)) {
+                throw std::runtime_error("Skybox faces must be square and equally sized: " +
+                                         path.string() + " is " + std::to_string(width) + "x" +
+                                         std::to_string(height));
+            }
+            if (width > maximumSize) {
+                throw std::runtime_error("Skybox face exceeds this GPU's cubemap size limit: " +
+                                         path.string());
+            }
+            faceSize = width;
+            // The current terrain/water pipeline outputs display-space colours.
+            // Keep this RGB8 texture in that same space instead of decoding sRGB.
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(face),
+                         0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.get());
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+        glGenVertexArrays(1, &vao_);
+        glGenBuffers(1, &vbo_);
+        if (vao_ == 0 || vbo_ == 0) throw std::runtime_error("Cannot create skybox mesh");
+        glBindVertexArray(vao_);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    } catch (...) {
+        release();
+        throw;
+    }
 }
 
 Skybox::~Skybox() {
     release();
 }
 
-Skybox::Skybox(Skybox&& other) noexcept
-    : shader_(std::move(other.shader_)),
-      cubemap_(std::move(other.cubemap_)),
-      vao_(std::exchange(other.vao_, 0)),
-      vbo_(std::exchange(other.vbo_, 0)),
-      ebo_(std::exchange(other.ebo_, 0)) {}
-
-Skybox& Skybox::operator=(Skybox&& other) noexcept {
-    if (this != &other) {
-        release();
-        shader_ = std::move(other.shader_);
-        cubemap_ = std::move(other.cubemap_);
-        vao_ = std::exchange(other.vao_, 0);
-        vbo_ = std::exchange(other.vbo_, 0);
-        ebo_ = std::exchange(other.ebo_, 0);
-    }
-    return *this;
-}
-
 void Skybox::release() noexcept {
-    if (ebo_ != 0) glDeleteBuffers(1, &ebo_);
     if (vbo_ != 0) glDeleteBuffers(1, &vbo_);
     if (vao_ != 0) glDeleteVertexArrays(1, &vao_);
-    ebo_ = vbo_ = vao_ = 0;
+    if (texture_ != 0) glDeleteTextures(1, &texture_);
+    texture_ = vao_ = vbo_ = 0;
 }
 
-void Skybox::draw(const glm::mat4& view, const glm::mat4& projection,
-                  const glm::vec3& fogColor) const {
-    if (vao_ == 0) return;
-    // The vertex shader writes depth 1.0, the cleared value; GL_LESS would
-    // reject every sky fragment, GL_LEQUAL keeps those nothing covered.
-    glDepthFunc(GL_LEQUAL);
-    shader_.use();
-    // Dropping the translation keeps the cube centred on the camera, so the
-    // sky rotates with the view but never comes closer.
-    shader_.set("uView", glm::mat4(glm::mat3(view)));
-    shader_.set("uProjection", projection);
-    shader_.set("uFogColor", fogColor);
-    cubemap_.bind(TextureUnit::Sky);
+void Skybox::bind(unsigned unit) const {
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture_);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+}
+
+void Skybox::draw() const {
     glBindVertexArray(vao_);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(cubeFaces.size()), GL_UNSIGNED_BYTE,
-                   nullptr);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
-    glDepthFunc(GL_LESS);
 }
 
 } // namespace mla

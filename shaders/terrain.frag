@@ -27,8 +27,8 @@ void main() {
     base *= 0.94 + 0.12 * variation;
     float diffuse = max(dot(n, normalize(uLightDirection)), 0.0);
     float skyFill = 0.5 + 0.5 * n.y;
-    vec3 ambient = mix(vec3(0.13, 0.16, 0.18), vec3(0.30, 0.36, 0.40), skyFill);
-    vec3 color = base * (ambient + vec3(0.95, 0.86, 0.70) * diffuse * 0.85);
+    vec3 ambient = mix(vec3(0.035, 0.05, 0.085), vec3(0.09, 0.12, 0.18), skyFill);
+    vec3 color = base * (ambient + vec3(0.48, 0.62, 0.90) * diffuse * 0.34);
     color = pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
     // Lighting stays flat per triangle; fog blends smoothly across the surface.
     float distanceFog = smoothstep(95.0, 230.0, length(uCameraPosition - vPosition));

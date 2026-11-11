@@ -5,11 +5,14 @@ layout(location = 2) in vec2 aUV;
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
+uniform mat4 uReflectionVP;
 out vec3 vPosition;
+out vec4 vReflectionClip;
 void main() {
     // The surface stays flat: the fragment shader derives the wave normal from
     // the world position, so no displacement or interpolated normal is needed.
     vec4 world = uModel * vec4(aPosition, 1.0);
     vPosition = world.xyz;
+    vReflectionClip = uReflectionVP * world;
     gl_Position = uProjection * uView * world;
 }

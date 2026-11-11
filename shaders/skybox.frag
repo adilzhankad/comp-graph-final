@@ -1,16 +1,16 @@
 #version 330 core
 in vec3 vDirection;
-uniform samplerCube uSky;
+uniform samplerCube uSkybox;
 uniform vec3 uFogColor;
 out vec4 fragColor;
 
 void main() {
     vec3 direction = normalize(vDirection);
-    // The cubemap stores display-space colours, like the fog colour.
-    vec3 sky = texture(uSky, direction).rgb;
-    // The ground fades into uFogColor at its far edge. Haze that reaches the
-    // same colour at the horizon hides where the terrain mesh ends, and
-    // follows whatever fog colour the scene uses without regenerating faces.
-    float haze = 1.0 - smoothstep(-0.02, 0.22, direction.y);
-    fragColor = vec4(mix(sky, uFogColor, haze), 1.0);
+    vec3 stars = texture(uSkybox, direction).rgb;
+    // Same display-space atmosphere and star brightness as lake.frag::sky.
+    vec3 night = vec3(0.008, 0.014, 0.032) + stars * vec3(0.75, 0.80, 0.90);
+    // Match the terrain/water fog at the horizon. The upper sky keeps the
+    // texture's stars; below the horizon the finite terrain fades into haze.
+    float visibility = smoothstep(0.0, 0.22, direction.y);
+    fragColor = vec4(mix(uFogColor, night, visibility), 1.0);
 }
