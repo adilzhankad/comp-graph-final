@@ -31,7 +31,7 @@ add_executable(MountainLakeAurora
     src/main.cpp src/Shader.cpp src/Mesh.cpp src/Terrain.cpp
     src/Lake.cpp src/Scene.cpp
     src/Texture.cpp
-    src/Skybox.cpp src/ReflectionTarget.cpp src/Aurora.cpp
+    src/Skybox.cpp src/ReflectionTarget.cpp src/Aurora.cpp src/MeteorShower.cpp
     src/Primitives.cpp src/Lighthouse.cpp src/Plane.cpp
     src/Forest.cpp)
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
@@ -63,6 +63,9 @@ if(BUILD_TESTING)
     add_executable(core_tests tests/core_tests.cpp)
     target_link_libraries(core_tests PRIVATE mla_core)
     add_test(NAME camera_and_hierarchy COMMAND core_tests)
+    add_executable(meteor_tests tests/meteor_tests.cpp)
+    target_link_libraries(meteor_tests PRIVATE mla_core)
+    add_test(NAME meteor_motion COMMAND meteor_tests)
     add_executable(heightmap_tests tests/heightmap_tests.cpp)
     target_link_libraries(heightmap_tests PRIVATE mla_core)
     add_test(NAME heightmap COMMAND heightmap_tests "${CMAKE_CURRENT_SOURCE_DIR}/assets/heightmaps/mountain_lake.pgm")

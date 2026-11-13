@@ -57,6 +57,7 @@ Scene::Scene(const std::filesystem::path& root)
       lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
       skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag"),
       auroraShader_(root / "shaders/aurora.vert", root / "shaders/aurora.frag"),
+      meteorShader_(root / "shaders/meteor.vert", root / "shaders/meteor.frag"),
       objectShader_(root / "shaders/object.vert", root / "shaders/object.frag"),
       treeShader_(root / "shaders/tree.vert", root / "shaders/tree.frag"),
       beamShader_(root / "shaders/beam.vert", root / "shaders/beam.frag") {}
@@ -167,6 +168,14 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
         auroraShader_.set("uIntensity", settings.auroraIntensity);
         auroraShader_.set("uPalette", static_cast<int>(settings.auroraPalette));
         aurora_.draw();
+        glDisable(GL_BLEND);
+    }
+    // The same timed world-space streaks are visible from both cameras.
+    // Existing terrain/prop depth occludes them; emissive trails never write it.
+    if (settings.meteors) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        meteors_.draw(meteorShader_, view, projection, eye, settings.time);
         glDisable(GL_BLEND);
     }
     glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);

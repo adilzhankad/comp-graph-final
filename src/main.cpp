@@ -30,9 +30,10 @@ void printHelp() {
         << "Tab capture/release mouse | [ / ] light direction | T pause animation\n"
         << "U aurora on/off | C aurora color: green / blue / orange\n"
         << "Up/Down aurora brightness | Left/Right aurora speed\n"
+        << "M meteor shower on/off\n"
         << "L lighthouse beacon on/off | , / . sweep slower/faster\n"
-        << "P wireframe | R reflections | H console help | Esc quit\n"
-        << "Current scene: terrain, starry sky, lake, aurora, pines, lighthouse and plane.\n"
+        << "P wireframe | R scene / sky-only reflections | H console help | Esc quit\n"
+        << "Current scene: terrain, starry sky, lake, aurora, meteors, pines, lighthouse and plane.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm>\n"
         << "     --aurora-color <green|blue|orange> | --help\n";
 }
@@ -165,7 +166,14 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         switch (key) {
         case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, GLFW_TRUE); break;
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
-        case GLFW_KEY_R: state.scene.reflections = !state.scene.reflections; break;
+        case GLFW_KEY_R:
+            state.scene.reflections = !state.scene.reflections;
+            std::cout << "Reflections: " << (state.scene.reflections ? "full scene" : "sky only") << '\n';
+            break;
+        case GLFW_KEY_M:
+            state.scene.meteors = !state.scene.meteors;
+            std::cout << "Meteor shower: " << (state.scene.meteors ? "on" : "off") << '\n';
+            break;
         case GLFW_KEY_U: state.scene.aurora = !state.scene.aurora; break;
         case GLFW_KEY_C:
             switch (state.scene.auroraPalette) {
@@ -301,7 +309,9 @@ int run(const Options& options, const char* executable) {
         if (now - titleTime >= .5) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
-                  << titleFrames / (now - titleTime) << " FPS | Night lake, pines, lighthouse and plane | Aurora "
+                  << titleFrames / (now - titleTime) << " FPS | Reflections "
+                  << (state.scene.reflections ? "scene" : "sky only")
+                  << " | Meteors " << (state.scene.meteors ? "on" : "off") << " | Aurora "
                   << (state.scene.aurora ? "on" : "off") << " | "
                   << mla::auroraPaletteName(state.scene.auroraPalette) << " | Brightness "
                   << std::setprecision(0) << state.scene.auroraIntensity * 100.0f << "% | Speed "

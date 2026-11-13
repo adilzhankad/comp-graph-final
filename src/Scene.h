@@ -5,6 +5,7 @@
 #include "Forest.h"
 #include "Lake.h"
 #include "Lighthouse.h"
+#include "MeteorShower.h"
 #include "Plane.h"
 #include "ReflectionTarget.h"
 #include "Shader.h"
@@ -23,6 +24,7 @@ struct SceneSettings {
     float auroraTime = 0.0f;
     float auroraSpeed = 1.0f;
     bool aurora = true;
+    bool meteors = true;
     AuroraPalette auroraPalette = AuroraPalette::Green;
     bool wireframe = false;
     bool reflections = true;
@@ -35,7 +37,7 @@ struct SceneSettings {
     float beaconTurns = 0.0f;
 };
 
-// Mountain lake, starry sky, aurora, forest, lighthouse and plane.
+// Mountain lake, starry sky, aurora, meteors, forest, lighthouse and plane.
 class Scene {
 public:
     explicit Scene(const std::filesystem::path& resourceRoot);
@@ -61,12 +63,14 @@ private:
     Plane plane_;
     Skybox skybox_;
     Aurora aurora_;
+    MeteorShower meteors_;
     Forest forest_;
     ReflectionTarget reflection_;
     Shader terrainShader_;
     Shader lakeShader_;
     Shader skyboxShader_;
     Shader auroraShader_;
+    Shader meteorShader_;
     Shader objectShader_;
     Shader treeShader_;
     Shader beamShader_;

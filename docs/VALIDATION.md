@@ -1,6 +1,26 @@
 # Mountain-lake scene validation
 
-Updated 2026-11-14. The combined scene includes low-poly terrain, a starry sky, three animated aurora curtains, instanced pine trees, a sweeping lighthouse beacon and a plane with blinking lights, with planar lake reflections. The first section records validation of the combined scene. Later dated sections preserve earlier per-feature evidence.
+Updated 2026-11-14. The combined scene includes low-poly terrain, a starry sky, three animated aurora curtains, instanced pine trees, a sweeping lighthouse beacon, a plane with blinking lights and an intermittent meteor shower, with planar lake reflections. The latest sections record validation of the combined scene. Later dated sections preserve earlier per-feature evidence.
+
+## Meteor shower and visible reflection modes — 2026-11-14
+
+Six deterministic emitters reuse a static two-triangle quad for shooting stars with growing, tapered trails and fading white heads. Meteors use the shared scene clock, with the same world positions in the direct and mirrored views. `M` toggles them; `T` pauses their clock with the scene. The title now shows selected meteor and reflection modes, and `M` / `R` print changes in the console.
+
+| Check | Result |
+|---|---|
+| Windows x64 builds | Release and Debug passed with MSVC 19.44; no compiler warnings reported |
+| CPU tests | 4/4 passed in each configuration: camera/hierarchy/beacon/Bézier, meteor motion, heightmap and forest placement |
+| Meteor lifetime and motion | Tests sampled 80 seconds for each source: finite bounded state, real active/quiet intervals, descending motion, tail behind the head, gradual birth/burnout, varying repeat positions and deterministic resampling; invalid inputs stayed inactive |
+| Application graphics smoke | Release rendered four hidden-window frames; shader compilation, nonempty output and OpenGL error checks passed |
+| GPU | Intel Iris Xe Graphics, OpenGL 3.3.0, driver 32.0.101.6913 |
+| Direct and reflected visibility | Temporary Release harness compared meteors on/off at 16 sample times. At scene time 3.175 seconds, 201 upper-scene and 185 lower-lake pixels changed by more than 3 summed RGB levels |
+| Existing scene preserved | Meteor-on frames never darkened existing pixels beyond 1/255 rounding tolerance. Disabling the effect restored identical frames, and the selected view showed mountains, trees, lighthouse and plane with their reflections |
+| Reflection fallback | With `R` set to sky-only, meteors still appeared directly but contributed no lower-lake pixels; the direct sky was unchanged by the reflection toggle |
+| State and animation | Fixed-time frames were identical; advancing the shared clock moved meteor emission. Framebuffer, viewport, depth, blending, clipping, polygon and texture state checks passed, including filled rendering after wireframe |
+| Input handlers | The real registered callback handled `M` off/on, ignored repeat/release and toggled `T` pause/resume |
+| Visual review | Startup and an active reflected-flight capture reviewed at 1280 × 720; thin luminous trails and compact heads remain distinct over the aurora |
+
+`preview.png` is the new Release startup capture from `--smoke-test --capture`, converted losslessly from PPM to PNG. Some trajectories reflect outside the visible lake at the default camera; other flights cross the visible reflection. The temporary harness invokes callbacks directly and is not physical keyboard/mouse validation. No FPS benchmark or cross-platform runtime result is claimed for this pass.
 
 ## Combined scene, Bézier curtains and palettes — 2026-11-14
 
