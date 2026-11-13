@@ -12,8 +12,8 @@ namespace {
 
 constexpr float tau = 6.28318530718f;
 // A wide circle over the valley, high enough to clear the peaks.
-constexpr float radius = 85.0f;
-constexpr float altitude = 48.0f;
+constexpr float radius = 72.0f;
+constexpr float altitude = 41.0f;
 constexpr float lapSeconds = 52.0f;
 constexpr float bank = 0.2f;        // leaned into the turn
 // Navigation lights: a short flash, a long gap.
@@ -35,17 +35,17 @@ Plane::Plane() {
     pieces_.reserve(7);
     // The frustum stands on its base, so turn it to lie along +z, the way the
     // plane points, and pull it back so the wings sit near the middle.
-    const glm::mat4 nose = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) *
+    const glm::mat4 nose = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.6f)) *
                            glm::rotate(glm::mat4(1.0f), glm::radians(90.0f),
                                        glm::vec3(1.0f, 0.0f, 0.0f));
-    add(primitives::frustum(1.15f, 0.5f, 9.0f, 8), nose, hull);
-    add(primitives::cube(), box({0.0f, 0.0f, -0.4f}, {15.5f, 0.35f, 2.4f}), hull);
-    add(primitives::cube(), box({0.0f, 0.25f, -3.4f}, {5.4f, 0.25f, 1.1f}), hull);
-    add(primitives::cube(), box({0.0f, 1.1f, -3.5f}, {0.28f, 2.1f, 1.5f}), hull);
+    add(primitives::frustum(1.5f, 0.65f, 10.5f, 8), nose, hull);
+    add(primitives::cube(), box({0.0f, 0.0f, -0.6f}, {12.0f, 0.55f, 2.9f}), hull);
+    add(primitives::cube(), box({0.0f, 0.3f, -3.9f}, {4.8f, 0.35f, 1.4f}), hull);
+    add(primitives::cube(), box({0.0f, 1.3f, -4.0f}, {0.35f, 2.2f, 1.7f}), hull);
     // Navigation lights: both wingtips and the belly.
-    add(primitives::cube(), box({-7.5f, 0.05f, -0.4f}, glm::vec3(0.55f)), lamp, 3.5f);
-    add(primitives::cube(), box({7.5f, 0.05f, -0.4f}, glm::vec3(0.55f)), lamp, 3.5f);
-    add(primitives::cube(), box({0.0f, -0.8f, 0.6f}, glm::vec3(0.45f)), lamp, 3.5f);
+    add(primitives::cube(), box({-5.8f, 0.05f, -0.6f}, glm::vec3(0.8f)), lamp, 3.5f);
+    add(primitives::cube(), box({5.8f, 0.05f, -0.6f}, glm::vec3(0.8f)), lamp, 3.5f);
+    add(primitives::cube(), box({0.0f, -1.0f, 0.8f}, glm::vec3(0.7f)), lamp, 3.5f);
 
     parts_.resize(pieces_.size());
     update(0.0f);
