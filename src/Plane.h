@@ -22,7 +22,11 @@ public:
     Plane(const Plane&) = delete;
     Plane& operator=(const Plane&) = delete;
 
+    // Flies one lap of its circle. Time comes from the scene clock, so T stops
+    // the plane with everything else.
+    void update(float time);
     const std::vector<Part>& parts() const { return parts_; }
+    glm::vec3 position() const { return glm::vec3(model_[3]); }
 
 private:
     struct Piece {

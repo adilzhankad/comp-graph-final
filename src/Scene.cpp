@@ -140,6 +140,7 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     // The hierarchy is updated before anything reads a world matrix: the beam
     // mesh, the lamp and the light the shaders get all come out of the same one.
     lighthouse_.update(settings.beaconTurns);
+    plane_.update(settings.time);
     const auto beacon = lighthouse_.beacon(settings.beacon);
 
     // Reflect world coordinates about y = waterLevel. Using V*M includes the

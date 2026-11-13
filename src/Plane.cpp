@@ -4,10 +4,20 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <cmath>
 #include <utility>
 
 namespace mla {
 namespace {
+
+constexpr float tau = 6.28318530718f;
+// A wide circle over the valley, high enough to clear the peaks.
+constexpr float radius = 85.0f;
+constexpr float altitude = 48.0f;
+constexpr float lapSeconds = 52.0f;
+constexpr float bank = 0.2f;        // leaned into the turn
+// Where it starts its lap: in front of the camera rather than behind it.
+constexpr float startAngle = tau * .55f;
 
 const glm::vec3 hull{0.17f, 0.18f, 0.21f};
 const glm::vec3 lamp{1.00f, 0.12f, 0.08f};
@@ -34,8 +44,17 @@ Plane::Plane() {
     add(primitives::cube(), box({7.5f, 0.05f, -0.4f}, glm::vec3(0.55f)), lamp, 3.5f);
     add(primitives::cube(), box({0.0f, -0.8f, 0.6f}, glm::vec3(0.45f)), lamp, 3.5f);
 
-    model_ = glm::translate(glm::mat4(1.0f), glm::vec3(-40.0f, 58.0f, -60.0f));
     parts_.resize(pieces_.size());
+    update(0.0f);
+}
+
+void Plane::update(float time) {
+    const float angle = startAngle + time * tau / lapSeconds;
+    const glm::vec3 position(std::sin(angle) * radius, altitude, std::cos(angle) * radius);
+    // The plane points along +z, so the heading is the tangent of the circle.
+    model_ = glm::rotate(glm::translate(glm::mat4(1.0f), position), angle + tau * .25f,
+                         glm::vec3(0.0f, 1.0f, 0.0f));
+    model_ = glm::rotate(model_, bank, glm::vec3(0.0f, 0.0f, 1.0f));
     refresh();
 }
 
