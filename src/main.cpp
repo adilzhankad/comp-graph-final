@@ -30,7 +30,7 @@ void printHelp() {
         << "Tab capture/release mouse | [ / ] light direction | T pause waves and beam\n"
         << "L lighthouse beacon on/off | , / . sweep slower/faster\n"
         << "P wireframe | R reflections | H console help | Esc quit.\n"
-        << "Current scene: terrain, starry sky, lighthouse and lake.\n"
+        << "Current scene: terrain, starry sky, lake, pines, lighthouse and plane.\n"
         << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
 }
 
@@ -273,7 +273,7 @@ int run(const Options& options, const char* executable) {
         if (now - titleTime >= .5) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
-                  << titleFrames / (now - titleTime) << " FPS | Night lake and lighthouse";
+                  << titleFrames / (now - titleTime) << " FPS | Night lake, lighthouse and plane";
             glfwSetWindowTitle(window.handle, title.str().c_str());
             titleTime = now; titleFrames = 0;
         }
