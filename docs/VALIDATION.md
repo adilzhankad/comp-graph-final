@@ -1,6 +1,6 @@
 ﻿# Terrain, lake, starry-sky and lighthouse validation
 
-Updated 2026-11-11. The current scene renders the low-poly terrain, the lake and the starry skybox with matching blue night haze and planar landscape reflections, and the lighthouse whose beam turns over them. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. The remaining prop modules are also deferred.
+Updated 2026-11-13. The current scene renders the low-poly terrain, the lake and the starry skybox with matching blue night haze and planar landscape reflections, the lighthouse whose beam turns over them, and a plane circling above with blinking lights. Aurora remains separate deferred 3D ribbon geometry; it is not part of the sky texture or active scene. The remaining prop modules are also deferred.
 
 ## Planar mountain and shore reflections — 2026-11-07
 
@@ -206,3 +206,21 @@ Run on 2026-11-11, first on the lighthouse branch and then again after merging i
 Re-tuned during the merge, against the night palette rather than the daylight one the beacon was first set against: the beacon colour down from `(3.40, 2.80, 1.80)` to `(1.30, 1.05, 0.68)`, the shaft alpha from `0.26/0.34` to `0.15/0.26`, and `object.frag` moved onto the terrain's moonlight and night ambient. `preview.png` is the current capture, taken with `--smoke-test --capture`.
 
 No performance benchmark is claimed for this pass: the smoke test renders four frames and does not measure frame time. Interactive checks remain a team review task - the `L` toggle, the `,` / `.` sweep speed, the shaft seen from behind the lamp and from under the water surface, and the view of the tower from the air.
+
+## Plane
+
+Added 2026-11-13, on the same machine as the lighthouse pass.
+
+| Check | Result |
+|---|---|
+| Windows x64 Release and Debug | Both builds passed, no warnings |
+| CPU tests | Both suites passed in both configurations (2/2 each) |
+| Graphics check | Hidden-window smoke test passed in both configurations |
+| Geometry | Seven parts: fuselage, wing, tailplane, fin and three lamps. Checked up close by temporarily parking the plane in front of the start camera, from the side and head on. |
+| Path | A 72-unit circle at altitude 41, one lap per 52 seconds, banked 0.2 rad into the turn, heading along the tangent. |
+| Lights | Flash 0.12s every 1.3s; the emission is scaled in one place so the plane keeps its material colour while they are off. |
+| Clock | Driven by `SceneSettings::time`, so `T` stops the plane and the blinking with the waves. |
+
+Fixed while tuning: the first wing was 15.5 units across on a 9-unit fuselage, which from the valley floor read as a thin bar rather than a plane. The wing is now 12 units and thicker, the fuselage fatter, the lamps larger, and the circle was brought in from 85 to 72 units so the plane is not sitting in the far fog.
+
+The plane is drawn inside `renderEnvironment`, so the mirrored pass picks it up and it appears in the lake like the tower does. Interactive review is still a team task: how it reads while crossing the frame, whether the lap is too fast or too slow, and whether it should have a light the water can catch.

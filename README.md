@@ -30,7 +30,7 @@ Planned final scene: a real-time interactive landscape written in **C++** with *
 
 ## Status
 
-The current milestone is the **terrain, the lake, the starry sky and the lighthouse**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces, holding a rippling lake under a night cubemap, with a lighthouse on the east bank whose beam turns over both. The complete mountain-lake scene remains the final target.
+The current milestone is the **terrain, the lake, the starry sky, the lighthouse and the plane**: a low-poly mountain landscape with sharp peaks and clearly visible triangular faces, holding a rippling lake under a night cubemap, with a lighthouse on the east bank whose beam turns over both. The complete mountain-lake scene remains the final target.
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
@@ -45,9 +45,10 @@ The current milestone is the **terrain, the lake, the starry sky and the lightho
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
 - A lighthouse on the shore, built from 18 low-poly sections and placed by sampling the terrain under it. Its lamp hangs under a scene node that turns, and the beam node under that aims the light down towards the water: one hierarchy drives the lamp, the cone of lit air and the light itself.
 - A second light source, and the first moving one: the beam is a spot light that sweeps the ground and the water, with the same cone the visible shaft is drawn with. `L` switches it off, `,` / `.` change how fast it turns, and `T` freezes it with the waves.
+- A plane circling over the valley with three blinking red navigation lights. It runs off the same clock as the waves and the beam, so `T` stops all of them together.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
-![The night terrain, lake and lighthouse rendered by the application](docs/preview.png)
+![The night terrain, lake, lighthouse and plane rendered by the application](docs/preview.png)
 
 This is an actual 1280×720 application capture of the night scene. Windows Release/Debug builds, CPU tests and graphics smoke tests passed; additional camera-view and render-state checks are recorded in [docs/VALIDATION.md](docs/VALIDATION.md). FPS benchmarking and interactive control review remain outstanding.
 
@@ -94,7 +95,7 @@ The aurora prototype is retained for later work, but is excluded from the curren
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox and lighthouse are active; the remaining objects are deferred. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, lighthouse and plane are active; the remaining objects are deferred. |
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
 | R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain specular term are deferred. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures and aurora integration remain. |
@@ -220,6 +221,7 @@ comp-graph-final/
 │   ├── Lake.h/.cpp       # independent coarse water grid restricted to the basin
 │   ├── Skybox.h/.cpp     # owning cubemap and cube mesh, image validation
 │   ├── Lighthouse.h/.cpp # the tower, the turning lamp node and the beam cone
+│   ├── Plane.h/.cpp      # plane geometry, its circle and the blinking lights
 │   ├── Beacon.h/.cpp     # the lamp as a spot light; no OpenGL, so it is tested
 │   ├── Primitives.h/.cpp # cube, cone, frustum and the hollow beam cone
 │   └── Aurora.h/.cpp     # deferred prototype, excluded from the application build
@@ -256,7 +258,7 @@ The active renderer first captures the solid world from a camera mirrored across
 Steps 1-5 are implemented for the terrain, the lighthouse, the skybox, the lake and the beam. The remaining objects and the UI are planned.
 
 1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, render the solid world and the sky into a framebuffer. Trees, campfire and aurora will join this pass when integrated.
-2. **Opaque pass: terrain**, **lighthouse**, trees, campfire, tent, boat.
+2. **Opaque pass: terrain**, **lighthouse**, **plane**, trees, campfire, tent, boat.
 3. **Skybox** (depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled).
 4. **Lake — alpha blending, depth write off.**
 5. **Beam** and aurora — additive blending (`GL_SRC_ALPHA, GL_ONE`), depth write off, so they glow over what is behind them while the mountains still cut them off.
