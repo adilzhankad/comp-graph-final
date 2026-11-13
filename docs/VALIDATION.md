@@ -1,6 +1,6 @@
-# Mountain lake and aurora validation
+# Mountain-lake scene validation
 
-Updated 2026-11-11. The current scene renders low-poly terrain, a starry sky, three animated aurora curtains and a lake reflecting the landscape and aurora. Prop modules remain deferred.
+Updated 2026-11-14. The combined scene includes low-poly terrain, a starry sky, three animated aurora curtains, instanced pine trees, a sweeping lighthouse beacon and a plane with blinking lights, with planar lake reflections. The dated sections below preserve the checks performed on each feature; they do not by themselves establish validation of the merged scene.
 
 ## Soft aurora curtains and flowing colour — 2026-11-11
 
@@ -209,3 +209,57 @@ Run on a second machine after the terrain revision above, so the two sections de
 A lake capture was produced with `--smoke-test --capture` for this pass; the preview image has since been replaced by the night-scene capture above. The heightmap test covers the flooded area, the bed depth, the banks and the southern bank profile, so a regenerated heightmap that loses the basin fails the suite rather than silently draining the lake.
 
 No performance benchmark is claimed for this pass either: the smoke test renders four frames and does not measure frame time. The FPS table in the README still needs a real measurement at 1280x720 on each team machine. Linux and macOS runtime, GitHub CI results and interactive exploration remain team review tasks.
+
+## Skybox and textures (task 02)
+
+Branch `feat/skybox-textures`. `Texture`, `Skybox`, `shaders/skybox.*` and the generated cubemap were written here; nothing below is an application run.
+
+| Check | Result |
+|---|---|
+| Strict compile | `src/Texture.cpp` and `src/Skybox.cpp` compile with GCC and Clang under `-Wall -Wextra -Wpedantic -Werror`. MSVC `/W4` not yet run. |
+| Headless render | A throwaway harness (not committed) created an OpenGL 4.5 core context on Mesa llvmpipe through EGL, loaded the six faces through `Texture::loadCubemap`, and drew the skybox from five directions into a 640×360 framebuffer cleared to magenta. |
+| Coverage and depth | No magenta pixel remained in any view: the `.xyww` depth of 1.0 passes with `GL_LEQUAL`. `glGetIntegerv(GL_DEPTH_FUNC)` returned `GL_LESS` after every draw. `glGetError` stayed `GL_NO_ERROR`. |
+| Seams and orientation | Views across a cube edge, a cube corner and the zenith showed no seam and no mirrored or rotated face; the Milky Way band continues across face boundaries. |
+| Ownership | A moved-from `Skybox` (and its `Texture`) was destroyed without errors. A missing file throws `Cannot load texture <path>: can't fopen`. |
+| Asset size | Six 1024×1024 PNGs, about 680 KB in total. |
+
+**Superseded in part.** `feat/mountain-lake-foundation` had written its own skybox at the same paths and wired it into `Scene`, so the merge into `main` kept that one; these faces and this `Texture` wrapper stay in the tree, and the wrapper is still the one the terrain textures are meant to use. The team owns the decision of which module to keep long term.
+
+## Lighthouse and beacon pass
+
+Run on 2026-11-11, first on the lighthouse branch and then again after merging it with the night scene.
+
+| Check | Result |
+|---|---|
+| Windows x64 Release and Debug | Both builds passed with MSVC 19.51, CMake 4.4.3, no warnings under `/W4 /permissive-` |
+| CPU tests | Camera/hierarchy/beacon and heightmap suites passed in both configurations (2/2 each) |
+| Graphics check | Hidden-window smoke test passed in both configurations: all five shader programs compiled and linked, no OpenGL errors, frame not uniform |
+| GPU | NVIDIA GeForce RTX 3050, OpenGL 3.3.0 / driver 610.88, Windows 11 |
+| Lighthouse | 18 sections; foot dropped onto the terrain at `(29, -5)`, lamp at `(29.0, 17.6, -5.0)` as reported at start-up |
+| Shader includes | `#include "beacon.glsl"` resolved in the terrain, lake and object fragment shaders; a missing or malformed include fails the shader load with the including file named |
+| Second light | Verified by rendering a frame with the beam mesh suppressed: the beacon alone leaves a visible lit patch on the far bank, so the terrain and water response is the light and not the additive shaft |
+| Lit air clipped at the water | With the cone tilted down, fragments below `world::waterLevel` are discarded; without the clip the shaft was drawn straight through the lake, since the water writes no depth |
+| Beam phase | Integrated from the animation clock in the main loop, so `T` freezes the sweep and a speed change does not jump it |
+| In the reflection | The tower is drawn inside `renderEnvironment`, so the mirrored pass picks it up: the capture shows the tower and the lit bank in the water. The shaft itself is left out of that pass. |
+
+Re-tuned during the merge, against the night palette rather than the daylight one the beacon was first set against: the beacon colour down from `(3.40, 2.80, 1.80)` to `(1.30, 1.05, 0.68)`, the shaft alpha from `0.26/0.34` to `0.15/0.26`, and `object.frag` moved onto the terrain's moonlight and night ambient. `preview.png` is the current capture, taken with `--smoke-test --capture`.
+
+No performance benchmark is claimed for this pass: the smoke test renders four frames and does not measure frame time. Interactive checks remain a team review task - the `L` toggle, the `,` / `.` sweep speed, the shaft seen from behind the lamp and from under the water surface, and the view of the tower from the air.
+
+## Plane
+
+Added 2026-11-13, on the same machine as the lighthouse pass.
+
+| Check | Result |
+|---|---|
+| Windows x64 Release and Debug | Both builds passed, no warnings |
+| CPU tests | Both suites passed in both configurations (2/2 each) |
+| Graphics check | Hidden-window smoke test passed in both configurations |
+| Geometry | Seven parts: fuselage, wing, tailplane, fin and three lamps. Checked up close by temporarily parking the plane in front of the start camera, from the side and head on. |
+| Path | A 72-unit circle at altitude 41, one lap per 52 seconds, banked 0.2 rad into the turn, heading along the tangent. |
+| Lights | Flash 0.12s every 1.3s; the emission is scaled in one place so the plane keeps its material colour while they are off. |
+| Clock | Driven by `SceneSettings::time`, so `T` stops the plane and the blinking with the waves. |
+
+Fixed while tuning: the first wing was 15.5 units across on a 9-unit fuselage, which from the valley floor read as a thin bar rather than a plane. The wing is now 12 units and thicker, the fuselage fatter, the lamps larger, and the circle was brought in from 85 to 72 units so the plane is not sitting in the far fog.
+
+The plane is drawn inside `renderEnvironment`, so the mirrored pass picks it up and it appears in the lake like the tower does. Interactive review is still a team task: how it reads while crossing the frame, whether the lap is too fast or too slow, and whether it should have a light the water can catch.

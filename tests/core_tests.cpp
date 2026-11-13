@@ -1,3 +1,4 @@
+#include "Beacon.h"
 #include "Camera.h"
 #include "SceneNode.h"
 
@@ -129,6 +130,46 @@ void sceneHierarchy() {
             "Empty child slots interfere with hierarchy updates");
 }
 
+void beaconSweep() {
+    // The same hierarchy the lighthouse builds: the lamp hangs under the tower,
+    // raised along its axis and turned about it. Nothing else moves the beam.
+    constexpr float tau = 6.28318530718f;
+    const glm::vec3 cone(0.9917f, 0.9994f, 170.0f);
+    mla::SceneNode tower;
+    tower.local = glm::translate(glm::mat4(1.0f), glm::vec3(29.0f, 1.0f, -5.0f));
+    auto& lamp = tower.addChild(std::make_unique<mla::SceneNode>());
+    auto sweep = [&](float turns) {
+        lamp.local = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 17.0f, 0.0f)),
+                                 turns * tau, glm::vec3(0.0f, 1.0f, 0.0f));
+        tower.updateWorld();
+        return mla::beaconFromLamp(lamp.world, glm::vec3(2.1f, 1.7f, 1.1f), cone);
+    };
+
+    const auto start = sweep(0.0f);
+    require(near(start.position, glm::vec3(29.0f, 18.0f, -5.0f)), "Beacon is not at the lamp");
+    require(near(start.direction, glm::vec3(0.0f, 0.0f, 1.0f)),
+            "The beam must leave the lamp along its local +z");
+    const auto quarter = sweep(0.25f);
+    require(near(quarter.position, start.position), "Turning the lamp must not move it");
+    require(near(quarter.direction, glm::vec3(1.0f, 0.0f, 0.0f)),
+            "A quarter turn must sweep the beam by 90 degrees");
+    require(near(sweep(1.0f).direction, start.direction),
+            "A whole turn must bring the beam back to its start");
+    const auto partial = sweep(0.37f);
+    require(near(glm::length(partial.direction), 1.0f), "Beam direction must stay normalized");
+    require(near(partial.direction.y, 0.0f), "A beam swept about the tower axis must stay level");
+    require(near(start.color, glm::vec3(2.1f, 1.7f, 1.1f)) && near(start.cone, cone),
+            "Beacon colour and cone are not passed through");
+    requireInvalid([&] { mla::beaconFromLamp(glm::mat4(0.0f), glm::vec3(1.0f), cone); },
+                   "A lamp transform with no orientation was accepted");
+    requireInvalid([&] { mla::beaconFromLamp(glm::mat4(1.0f), glm::vec3(1.0f),
+                                             glm::vec3(0.999f, 0.99f, 170.0f)); },
+                   "A cone whose core is wider than its edge was accepted");
+    requireInvalid([&] { mla::beaconFromLamp(glm::mat4(1.0f), glm::vec3(1.0f),
+                                             glm::vec3(0.99f, 0.999f, 0.0f)); },
+                   "A beacon with no range was accepted");
+}
+
 } // namespace
 
 int main() {
@@ -136,7 +177,8 @@ int main() {
         cameraMovement();
         cameraLookAndProjection();
         sceneHierarchy();
-        std::cout << "Camera and scene hierarchy tests passed\n";
+        beaconSweep();
+        std::cout << "Camera, scene hierarchy and beacon tests passed\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Core test failure: " << error.what() << '\n';

@@ -22,13 +22,18 @@ target_include_directories(mla_glm SYSTEM INTERFACE external/glm)
 add_library(mla_image STATIC src/ImageLoader.cpp)
 target_include_directories(mla_image SYSTEM PUBLIC external/stb)
 
-add_library(mla_core STATIC src/Camera.cpp src/SceneNode.cpp src/Heightmap.cpp)
+add_library(mla_core STATIC src/Camera.cpp src/SceneNode.cpp src/Heightmap.cpp
+    src/Beacon.cpp src/ForestGen.cpp)
 target_include_directories(mla_core PUBLIC src)
 target_link_libraries(mla_core PUBLIC mla_glm mla_image)
 
 add_executable(MountainLakeAurora
     src/main.cpp src/Shader.cpp src/Mesh.cpp src/Terrain.cpp
-    src/Lake.cpp src/Scene.cpp src/Skybox.cpp src/ReflectionTarget.cpp src/Aurora.cpp)
+    src/Lake.cpp src/Scene.cpp
+    src/Texture.cpp
+    src/Skybox.cpp src/ReflectionTarget.cpp src/Aurora.cpp
+    src/Primitives.cpp src/Lighthouse.cpp src/Plane.cpp
+    src/Forest.cpp)
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
 target_compile_definitions(MountainLakeAurora PRIVATE GLFW_INCLUDE_NONE NOMINMAX)
 set_property(TARGET MountainLakeAurora PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MountainLakeAurora>")
@@ -61,4 +66,7 @@ if(BUILD_TESTING)
     add_executable(heightmap_tests tests/heightmap_tests.cpp)
     target_link_libraries(heightmap_tests PRIVATE mla_core)
     add_test(NAME heightmap COMMAND heightmap_tests "${CMAKE_CURRENT_SOURCE_DIR}/assets/heightmaps/mountain_lake.pgm")
+    add_executable(forest_tests tests/forest_tests.cpp)
+    target_link_libraries(forest_tests PRIVATE mla_core)
+    add_test(NAME forest_placement COMMAND forest_tests "${CMAKE_CURRENT_SOURCE_DIR}/assets/heightmaps/mountain_lake.pgm")
 endif()

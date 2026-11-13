@@ -30,7 +30,7 @@ Planned final scene: a real-time interactive landscape written in **C++** with *
 
 ## Status
 
-The current milestone is **aurora over the mountain lake**: a low-poly landscape with sharp peaks and clearly visible triangular faces, a rippling lake, a starry sky and soft animated aurora curtains. The complete mountain-lake scene remains the final target.
+The current milestone combines **aurora, forest, lighthouse and plane over the mountain lake**: a low-poly landscape with sharp peaks, a rippling lake, a starry sky and soft animated aurora curtains, with instanced pines on the slopes, a sweeping lighthouse beacon and a plane circling above. The complete mountain-lake scene remains the final target.
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
@@ -42,20 +42,24 @@ The current milestone is **aurora over the mountain lake**: a low-poly landscape
 - Transparent water with Schlick fresnel and an artistic reflection floor, per-fragment normals from 16 directional waves with evolving wind patches and wave packets, and a soft Blinn-Phong highlight that `[` / `]` sweep across the lake. Fine ripples are softened and subpixel ripples filtered to steady the reflected stars.
 - A starry skybox using six 1024×1024 cubemap faces reprojected from NASA SVS's Deep Star Maps panorama, with mipmaps and seamless cubemap filtering.
 - Three folded aurora curtains with fine vertical rays, bright lower edges, soft fading tips and slowly shifting green, teal and violet colour. The ribbons are separate animated 3D geometry.
-- Planar reflections of the mountains, shore, sky and animated aurora, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
+- Planar reflections of the mountains, shore, forest, lighthouse, plane, sky and animated aurora, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
+- A lighthouse on the shore, built from 18 low-poly sections and placed by sampling the terrain under it. Its lamp hangs under a scene node that turns, and the beam node under that aims the light down towards the water: one hierarchy drives the lamp, the cone of lit air and the light itself.
+- A second light source, and the first moving one: the beam is a spot light that sweeps the ground and the water, with the same cone the visible shaft is drawn with. `L` switches it off, `,` / `.` change how fast it turns, and `T` freezes it with the waves.
+- Instanced pine trees on the slopes, placed by height and slope from the heightmap.
+- A plane circling over the valley with three blinking red navigation lights. It runs off the same clock as the waves and the beam, so `T` stops all of them together.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
-![Mountain lake and aurora rendered by the application](docs/preview.png)
+![Mountain lake night scene rendered by the application](docs/preview.png)
 
 The preview is an actual 1280×720 application capture. Build, graphics and camera-view evidence, with the scope of each check, is recorded in [docs/VALIDATION.md](docs/VALIDATION.md). Interactive control review and the team FPS benchmark remain outstanding.
 
-Aurora is part of the application build and both the main and reflected scene. Prop prototypes remain deferred. A single cool directional light suggests moonlight; the visible/movable moon setup and campfire remain planned. The aurora emits visible colour and appears in the lake reflection, but does not add a second material light source. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
+Aurora is part of the application build and both the main and reflected scene. The scene has two material lights: a cool directional one that suggests moonlight, and the lighthouse beacon. The aurora emits visible colour and appears in the lake reflection without illuminating terrain materials. The visible, movable moon, campfire and remaining props are planned. The feature checkboxes below track the **full final feature**, not just its first implementation. See [the implementation roadmap](docs/ROADMAP.md) for the next steps and the R1–R8 status.
 
 | Milestone | What we show | Status |
 |---|---|---|
 | Team & topic registration | Topic name + every member in MS Teams | ☐ |
-| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake, starry sky and aurora implemented; validation scope is recorded below; remaining objects deferred |
+| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake, starry sky, aurora, lighthouse, plane and pines implemented; validation scope is recorded below; remaining objects deferred |
 | Week 8 progress check | Lighting, textures, lake, aurora, interaction | ☐ |
 | Week 9 progress check | Almost finished project | ☐ |
 | Final submission (3 days before defense) | Tag `v1.0`, report PDF, slides, demo video | ☐ |
@@ -71,12 +75,13 @@ Aurora is part of the application build and both the main and reflected scene. P
 - [x] **Aurora** — three folded 3D curtains with procedural vertical rays, soft fades, flowing colour and additive emission; brightness, speed and visibility controls.
 - [x] **Starry skybox** — night cubemap with matching horizon haze and sky reflection in the lake; locally validated in Release and Debug.
 - [ ] **Campfire point light** — warm, flickering, with distance attenuation.
+- [x] **Lighthouse with a turning beacon** — a tower on the shore built from solids of revolution, a lamp on a rotating scene node, a translucent cone of lit air, and a spot light that sweeps the terrain and the water. *Not in the original topic list: it was added because the scene needed a second, moving light and a parent–child object to drive it.*
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
-- [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. Future props still need integration into that pass.
+- [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. The forest, lighthouse and plane share that pass; remaining props will join it when implemented.
 - [ ] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
-- [ ] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
+- [x] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
 
 ### Extra polish (only if time allows)
 
@@ -92,11 +97,11 @@ Aurora is part of the application build and both the main and reflected scene. P
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox and aurora are active; the remaining objects are deferred. |
-| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat → lantern** and **campfire → logs/stones** parent–child transforms. | Camera/model matrices and reusable scene-node code; no parent–child object group in the active scene yet. |
-| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Flat terrain faces with ambient and directional diffuse lighting; per-fragment fresnel and Blinn-Phong specular on the water from the same movable light. A second light source and the final material shading are deferred. |
-| R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, a mipmapped night cubemap and procedural aurora. Terrain/prop textures remain. |
-| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, aurora visibility/brightness/speed, animation pause, reflection toggle, wireframe and mouse capture. Prop controls remain inactive. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, aurora, lighthouse, plane and the instanced pines are active; the remaining objects are deferred. |
+| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
+| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain specular term are deferred. |
+| R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, procedural aurora and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures remain. |
+| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, beacon toggle and sweep speed, aurora visibility/brightness/speed, shared animation pause, reflection toggle, wireframe and mouse capture. The visible moon and campfire controls remain planned. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
 | R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies; clean isolated-source Windows Release/Debug builds and tests passed. Fresh-clone and cross-platform validation remain. |
 
@@ -104,7 +109,7 @@ Aurora is part of the application build and both the main and reflected scene. P
 
 ## Controls
 
-These controls apply to the current mountain-lake and aurora scene. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
+These controls apply to the current mountain-lake scene, including the aurora, lighthouse and plane. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
 
 | Key / input | Action |
 |---|---|
@@ -117,7 +122,9 @@ These controls apply to the current mountain-lake and aurora scene. `H` prints h
 | `U` | Toggle aurora visibility |
 | `Up` / `Down` | Increase / decrease aurora brightness (0–200%) |
 | `Left` / `Right` | Decrease / increase aurora speed (0.1–2.5×) |
-| `T` | Pause / resume both waves and aurora animation |
+| `L` | Lighthouse beacon on / off: the beam, the light it casts and the glow of the lamp |
+| `,` / `.` | Sweep slower / faster, from stopped to 12 turns per minute |
+| `T` | Pause / resume the waves, aurora, beacon sweep, plane and blinking lights |
 | `R` | Toggle planar scene reflections; off uses the earlier sky-only reflection |
 | `P` | Wireframe on / off |
 | `H` | Print current controls to the terminal; on-screen help is planned |
@@ -210,7 +217,7 @@ comp-graph-final/
 │   ├── Mesh.h/.cpp       # owning VAO/VBO/EBO wrapper, indexed draw
 │   ├── Camera.h/.cpp     # fly camera, frame-rate independent movement
 │   ├── SceneNode.h/.cpp  # scene graph: local transform, children, world matrix
-│   ├── Scene.h/.cpp      # reflection, terrain, skybox, aurora and lake passes
+│   ├── Scene.h/.cpp      # shared world, sky, aurora, reflection, lake and beam passes
 │   ├── ReflectionTarget.h/.cpp # owning colour/depth framebuffer, safe resize
 │   ├── World.h           # scene constants shared by renderer, generator and tests
 │   ├── Heightmap.h/.cpp  # image samples, height and normal lookup
@@ -218,14 +225,22 @@ comp-graph-final/
 │   ├── Terrain.h/.cpp    # coarse irregular grid and flat triangle normals
 │   ├── Lake.h/.cpp       # independent coarse water grid restricted to the basin
 │   ├── Skybox.h/.cpp     # owning cubemap and cube mesh, image validation
-│   ├── Aurora.h/.cpp     # separate folded 3D curtain meshes
-│   └── Primitives.h/.cpp # deferred prop geometry, excluded from the application build
+│   ├── Lighthouse.h/.cpp # the tower, the turning lamp node and the beam cone
+│   ├── Plane.h/.cpp      # plane geometry, its circle and the blinking lights
+│   ├── Beacon.h/.cpp     # the lamp as a spot light; no OpenGL, so it is tested
+│   ├── Primitives.h/.cpp # cube, cone, frustum and the hollow beam cone
+│   ├── Forest.h/.cpp     # instanced trunks and canopies
+│   ├── ForestGen.h/.cpp  # deterministic terrain-based tree placement
+│   └── Aurora.h/.cpp     # separate folded 3D curtain meshes
 ├── shaders/
 │   ├── terrain.vert / terrain.frag
 │   ├── lake.vert    / lake.frag
 │   ├── skybox.vert  / skybox.frag
-│   ├── aurora.vert  / aurora.frag    # animated folds, rays and colour
-│   └── object.vert  / object.frag    # deferred prop prototype
+│   ├── object.vert  / object.frag    # the lighthouse, and props to come
+│   ├── beam.vert    / beam.frag      # the cone of lit air
+│   ├── beacon.glsl                   # the beacon falloff, included by the three above
+│   ├── tree.vert    / tree.frag      # instanced forest
+│   └── aurora.vert  / aurora.frag    # animated folds, rays and colour
 ├── assets/
 │   ├── heightmaps/       # bundled reproducible starter heightmap
 │   └── skybox/           # NASA source panorama, six cubemap faces and provenance
@@ -236,7 +251,7 @@ comp-graph-final/
 └── external/            # bundled glfw, glad, glm, stb_image sources + versions.json
 ```
 
-Planned additions include a general 2D `Texture` wrapper, `Lights`, instanced tree rendering, `assets/textures/`, and the corresponding shaders. Add these as working modules, following [the roadmap](docs/ROADMAP.md).
+Planned additions include shared `Lights` data, integration of the existing `Texture` wrapper, `assets/textures/`, and the corresponding material shaders. Add these as working modules, following [the roadmap](docs/ROADMAP.md).
 
 Rule of thumb for D2: one class per concept, no application source file over ~500 lines, all shaders in separate `.vert`/`.frag` files. Third-party source is kept separate and retains upstream formatting.
 
@@ -244,16 +259,17 @@ Rule of thumb for D2: one class per concept, no application source file over ~50
 
 ## Technical notes
 
-The active renderer first captures terrain, sky and aurora from a camera mirrored across the lake. It then draws the main terrain with flat lighting, the skybox, additive aurora and the blended lake sampling the reflection. Terrain, skybox, aurora and lake sections below describe this implementation; the remaining scene sections preserve the **planned final design** for later milestones.
+The active renderer captures the solid world, sky and aurora from a camera mirrored across the lake. It draws those same passes for the real camera, then a blended water pass sampling the reflection, and finally the additive lighthouse beam. `Scene::renderEnvironment` is shared by the main and reflected views, so the terrain, lighthouse, plane, forest, sky and aurora appear in both. The remaining campfire, tent, boat and cinematic features preserve the **planned final design** for later milestones.
 
 ### Render order per frame
 
-1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, then render terrain, sky and additive aurora into a framebuffer.
-2. **Opaque terrain pass:** flat lighting and depth writes enabled. Future trees, campfire, tent and boat will join this pass.
+1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, then render terrain, lighthouse, plane, forest, sky and additive aurora into a framebuffer. The visible beam is excluded from this capture.
+2. **Opaque pass:** terrain, lighthouse, plane and instanced pine trees, with depth writes enabled.
 3. **Skybox:** depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled.
-4. **Aurora:** additive emission (`GL_ONE, GL_ONE`) with depth writes disabled; the terrain depth occludes the curtains. The shader outputs colour already weighted by intensity and fades.
+4. **Aurora:** additive emission (`GL_ONE, GL_ONE`) with depth writes disabled; opaque geometry occludes the curtains. The shader outputs colour already weighted by intensity and fades.
 5. **Lake:** alpha blending with depth writes disabled, sampling the reflected scene.
-6. Future on-screen UI; current FPS and aurora settings appear in the window title.
+6. **Lighthouse beam:** additive blending (`GL_SRC_ALPHA, GL_ONE`), depth writes disabled.
+7. Future on-screen UI; current FPS and scene settings appear in the window title.
 
 ### Terrain from a heightmap
 
@@ -303,7 +319,7 @@ Three separate 3D ribbon meshes form asymmetric curtains above the mountains. Ve
 
 The shader produces emissive colour for additive blending, with soft glow shaped inside the curtains. This pass uses no HDR framebuffer or bloom postprocess and does not illuminate terrain materials. Geometry depth keeps the light behind mountain silhouettes. The reflected pass uses the same meshes, shader and animation time, so lake ripples distort the actual coloured curtains.
 
-`U` toggles the aurora, arrow keys adjust brightness and speed, and `T` freezes both the waves and curtains. A separate accumulated aurora clock advances by `deltaTime × speed`, preserving animation phase when speed changes. The cinematic glide and its automatic intensity ramp remain planned.
+`U` toggles the aurora, arrow keys adjust brightness and speed, and `T` freezes the waves, curtains, beacon sweep and plane animation. A separate accumulated aurora clock advances by `deltaTime × speed`, preserving animation phase when speed changes. The cinematic glide and its automatic intensity ramp remain planned.
 
 ### Lake
 
@@ -325,13 +341,56 @@ The muted blue-grey body colour shares the landscape's palette. Schlick fresnel 
 
 `ReflectionTarget` owns an RGBA8 colour texture and a 24-bit depth renderbuffer. It resizes with the drawable viewport, scaling both dimensions together to fit within 1280×720, and preserves the previous allocation if resizing fails. The reflected view is `V·M`, where `M` maps `y` to `2·waterLevel − y`. Terrain fragments below the water plane are clipped with `gl_ClipDistance[0]`; clipping is disabled for the sky. The reflected camera position supplies terrain fog distance, while world-space lighting stays unchanged. The lake itself is excluded from the capture.
 
-The lake projects its world position through the reflected view and projection: `uv = clip.xy / clip.w · 0.5 + 0.5`. No extra Y flip is needed because points on the water plane are unchanged by `M`. The difference between the rippled and flat reflected rays gives a small UV distortion, reduced near texture edges; a flat normal introduces no offset. The texture uses linear filtering and edge clamping. `R` disables this extra pass and uses the original cubemap reflection along `reflect(-v, n)` instead. That fallback also covers underwater views and invalid projected coordinates. The same animated aurora is already included in this capture. Future props will need to be added when they become active scene objects.
+The lake projects its world position through the reflected view and projection: `uv = clip.xy / clip.w · 0.5 + 0.5`. No extra Y flip is needed because points on the water plane are unchanged by `M`. The difference between the rippled and flat reflected rays gives a small UV distortion, reduced near texture edges; a flat normal introduces no offset. The texture uses linear filtering and edge clamping. `R` disables this extra pass and uses the original cubemap reflection along `reflect(-v, n)` instead. That fallback also covers underwater views and invalid projected coordinates. The forest, lighthouse, plane and animated aurora are included in this capture. Future props will need to be added when they become active scene objects.
 
 - *(stretch)* Waves: the same wave trains displacing a finer grid, so the silhouette moves as well as the highlights.
 
+### Lighthouse and the turning beacon
+
+The tower stands at `(29, -5)` on the east bank, dropped onto the terrain by `Heightmap::heightAt` and clamped so that the plinth, which reaches below its own base, stays out of the water. It is 18 sections of `primitives::frustum`, a solid of revolution whose side normal is taken from the slant rather than from the triangle,
+
+```
+n_side = normalize( (cos a . h,  r_bottom - r_top,  sin a . h) )
+```
+
+so a section with one radius of zero still shades correctly. The lantern is an open cage of six posts instead of glass: the lamp inside stays visible and no transparent surface has to be sorted against the lake.
+
+Three nodes carry the animation, and only the middle one changes:
+
+```
+root  = T(x, ground, z) . R_y(yaw)              fixed: where the tower stands
+lamp  = T(0, lampHeight, 0) . R_y(2π . turns)   written once per frame
+beam  = R_x(tilt)                               fixed: 14 degrees nose-down
+```
+
+`SceneNode::updateWorld` propagates them, and everything the light is made of reads the result: the emissive lamp mesh and its reflector hang on `lamp`, while the cone of lit air and the spot light itself both come out of `beam.world` - its origin is the filament and its local **+z** is the direction the beam leaves. Nothing is aimed a second time, so the shaft, the lamp and the lit ground cannot drift apart.
+
+`turns` is integrated in the main loop from the animation clock, `turns = fmod(turns + dt . rpm / 60, 1)`, rather than derived from it: changing the speed with `,` / `.` then moves the beam on from where it stands instead of jumping it, and `T` freezes the sweep with the waves. Whole turns are dropped so the number stays small however long the window is open.
+
+**The light.** `src/Beacon.h` carries the four values the shaders need - position, direction, colour and `(cos θ_outer, cos θ_inner, range)` - and `shaders/beacon.glsl` turns them into light. The terrain, water and object shaders all `#include` that one file, which `Shader` resolves when it reads the source:
+
+```
+cone = smoothstep( cos θ_outer, cos θ_inner, dot(-l, beamAxis) )
+att  = 1 / (1 + k_l.d + k_q.d²)              k_l = 0.004, k_q = 0.00012
+fade = 1 - smoothstep( 0.75.range, range, d )
+I    = I_beacon . cone . att . fade
+```
+
+The constant term in the attenuation keeps the lamp from blowing out the gallery it stands on, and `fade` stops the light exactly where the drawn cone ends. The colour is set to zero while the beacon is off, so no shader needs a branch for the toggle.
+
+**The shaft.** The visible beam is a hollow cone - apex at the lamp, mouth at `range . tan θ_outer` - drawn last with additive blending, depth test on and depth writes off, so the mountains cut it where it reaches them. Both sides of the shell are drawn and add up to the depth of the air the line of sight crosses; the shell is brightest where it is seen edge-on, because that is where the ray stays inside the cone longest:
+
+```
+alpha = ( 0.15 . (0.22 + 0.78 . (1 - |n·v|)^1.5) . (1 - t)^1.8 + 0.26 . e^(-16t) ) . (1 - fog)
+```
+
+with `t` the fraction of the way from the apex to the mouth. Fragments below `world::waterLevel` are discarded: lit air stops at the surface, and what the beam does to the water is the lake shader's business.
+
+**On the water.** The beam adds the same two lobes the moon does, plus a broad scatter term of exponent 24 that is added *after* the reflection mix rather than to the body colour. Far water is seen at a grazing angle, where fresnel turns it into a mirror and would swallow anything blended into the body - which is exactly where the pool of light is.
+
 ### Instanced pine trees *(stretch)*
 
-One tree mesh (cone + cylinder), per-instance `mat4` model matrix in a VBO with `glVertexAttribDivisor`, positions sampled once at start-up from the terrain (only on slopes below a threshold and above the waterline). Uploaded once — no per-frame uploads of static data (B4).
+The forest uses two shared meshes: a hexagonal trunk and a canopy of three stacked cones. Each has a per-instance `mat4` model matrix in a VBO with `glVertexAttribDivisor`, with positions sampled once at start-up from the terrain by height and slope. Two `glDrawElementsInstanced` calls render the forest in each view. Matrices are uploaded once, with no per-frame uploads of static data (B4).
 
 ### Camera
 
@@ -382,4 +441,5 @@ Required by the course rules; kept up to date during the project and copied into
 | Tool | What it was used for | What we changed / checked |
 |---|---|---|
 | Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. Later carved the lake basin into the heightmap generator and implemented the lake surface, its shader and the related tests and documentation. | _Team reviewed and edited the text; fill in further uses here._ Lake build, test and capture evidence is recorded in `docs/VALIDATION.md`. The team must review the water appearance and be able to explain the basin, the depth-test shoreline and the wave-normal derivation at the defense. |
+| Claude (Anthropic), task 02 | Drafted `Texture` and `Skybox` with their shaders, and `scripts/generate_skybox.py` that produces the cubemap faces. | Checked in a headless Mesa render (see `docs/VALIDATION.md`). _Owner of task 02: describe what you reviewed and changed._ |
 | Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer and projective water sampling. Implemented folded aurora curtains, procedural rays and flowing colour, reflected animation and controls; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |
