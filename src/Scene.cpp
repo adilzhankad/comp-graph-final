@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "ForestGen.h"
 #include "World.h"
 
 #include <glad/glad.h>
@@ -51,10 +52,12 @@ Scene::Scene(const std::filesystem::path& root)
       lighthouse_(terrain_.heights(), lighthouseAnchor, lighthouseYaw),
       plane_(),
       skybox_(root / "assets/skybox/stars"),
+      forest_(generateForest(terrain_.heights())),
       terrainShader_(root / "shaders/terrain.vert", root / "shaders/terrain.frag"),
       lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
       skyboxShader_(root / "shaders/skybox.vert", root / "shaders/skybox.frag"),
       objectShader_(root / "shaders/object.vert", root / "shaders/object.frag"),
+      treeShader_(root / "shaders/tree.vert", root / "shaders/tree.frag"),
       beamShader_(root / "shaders/beam.vert", root / "shaders/beam.frag") {}
 
 void Scene::applyBeacon(const Shader& shader, const Beacon& beacon) const {
@@ -115,6 +118,24 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
         objectShader_.set("uEmission", part.emission);
         part.mesh->draw();
     }
+
+    // --- Instanced pine trees ---
+    // Drawn after the lighthouse so the GL state (depth test, cull face, polygon
+    // mode) is already configured for opaque solid geometry. The tree shader
+    // shares the same beacon uniforms as the other shaders; applyBeacon() sets
+    // them once and they are valid for both trunk and canopy passes.
+    treeShader_.use();
+    treeShader_.set("uView", view);
+    treeShader_.set("uProjection", projection);
+    treeShader_.set("uCameraPosition", eye);
+    treeShader_.set("uTerrainHalfSize", halfSize);
+    treeShader_.set("uFogColor", background());
+    treeShader_.set("uLightDirection", light);
+    applyBeacon(treeShader_, beacon);
+    treeShader_.set("uIsTrunk", 1);
+    forest_.drawTrunk();
+    treeShader_.set("uIsTrunk", 0);
+    forest_.drawCanopy();
 
     // Distant sky fills only untouched depth. Ignore camera translation and
     // keep the background filled even when the terrain is in wireframe mode.

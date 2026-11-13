@@ -45,6 +45,7 @@ The current milestone is the **terrain, the lake, the starry sky, the lighthouse
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
 - A lighthouse on the shore, built from 18 low-poly sections and placed by sampling the terrain under it. Its lamp hangs under a scene node that turns, and the beam node under that aims the light down towards the water: one hierarchy drives the lamp, the cone of lit air and the light itself.
 - A second light source, and the first moving one: the beam is a spot light that sweeps the ground and the water, with the same cone the visible shaft is drawn with. `L` switches it off, `,` / `.` change how fast it turns, and `T` freezes it with the waves.
+- Instanced pine trees on the slopes, placed by height and slope from the heightmap.
 - A plane circling over the valley with three blinking red navigation lights. It runs off the same clock as the waves and the beam, so `T` stops all of them together.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
@@ -95,7 +96,7 @@ The aurora prototype is retained for later work, but is excluded from the curren
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, lighthouse and plane are active; the remaining objects are deferred. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, lighthouse, plane and the instanced pines are active; the remaining objects are deferred. |
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
 | R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain specular term are deferred. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures and aurora integration remain. |
