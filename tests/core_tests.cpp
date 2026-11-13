@@ -1,4 +1,5 @@
 #include "Beacon.h"
+#include "Bezier.h"
 #include "Camera.h"
 #include "SceneNode.h"
 
@@ -170,6 +171,36 @@ void beaconSweep() {
                    "A beacon with no range was accepted");
 }
 
+void bezierCurtainPath() {
+    // This arch has independently known interior points; checking only its
+    // endpoints would also allow an incorrect straight-line implementation.
+    const mla::CubicBezier3 arch{{{0.0f, 0.0f, 0.0f}, {0.0f, 8.0f, 0.0f},
+                                 {8.0f, 8.0f, 0.0f}, {8.0f, 0.0f, 0.0f}}};
+    require(near(mla::cubicBezier(arch, 0.0f), arch.front()) &&
+            near(mla::cubicBezier(arch, 1.0f), arch.back()),
+            "Bezier curve does not interpolate its endpoints");
+    require(near(mla::cubicBezier(arch, 0.25f), glm::vec3(1.25f, 4.5f, 0.0f)) &&
+            near(mla::cubicBezier(arch, 0.5f), glm::vec3(4.0f, 6.0f, 0.0f)),
+            "Bezier handles do not produce the expected curved interior");
+
+    // An out-of-plane handle must fold the sheet in depth as well as height.
+    auto folded = arch;
+    folded[1].z = 12.0f;
+    require(near(mla::cubicBezier(folded, 0.25f), glm::vec3(1.25f, 4.5f, 5.0625f)),
+            "A Bezier depth handle is ignored or has an incorrect influence");
+
+    // Adjacent curtain segments share an endpoint and mirrored handles. Their
+    // numerical directions should agree across the join without a visible kink.
+    const mla::CubicBezier3 continuation{{arch[3], 2.0f * arch[3] - arch[2],
+                                         {16.0f, -8.0f, 0.0f}, {16.0f, 0.0f, 0.0f}}};
+    constexpr float step = 0.001f;
+    const auto incoming = glm::normalize(arch[3] - mla::cubicBezier(arch, 1.0f - step));
+    const auto outgoing = glm::normalize(mla::cubicBezier(continuation, step) - continuation[0]);
+    require(near(mla::cubicBezier(arch, 1.0f), mla::cubicBezier(continuation, 0.0f)) &&
+            glm::dot(incoming, outgoing) > 0.9999f,
+            "Joined Bezier segments do not preserve a smooth tangent");
+}
+
 } // namespace
 
 int main() {
@@ -178,7 +209,8 @@ int main() {
         cameraLookAndProjection();
         sceneHierarchy();
         beaconSweep();
-        std::cout << "Camera, scene hierarchy and beacon tests passed\n";
+        bezierCurtainPath();
+        std::cout << "Camera, scene hierarchy, beacon and Bezier tests passed\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Core test failure: " << error.what() << '\n';

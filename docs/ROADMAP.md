@@ -22,9 +22,11 @@ The sky shader adds a dark blue atmosphere and blends the star texture into the 
 
 ### Aurora
 
-Three soft 3D curtains sit above the mountains with animated folds, fine vertical rays, brighter lower edges and fading tips. Procedural green, teal and violet colour shifts locally over time. The additive pass retains mountain occlusion and is included in the lake reflection. It adds visible emission without illuminating terrain materials or using an HDR/bloom pipeline; the directional light and lighthouse beacon provide the material lighting.
+Three extended 3D curtains follow baselines made of three joined cubic Bézier segments per curtain, with four control points per segment, evaluated by the reusable [`Bezier.h`](../src/Bezier.h) helper and sampled into ribbon geometry in [`Aurora.cpp`](../src/Aurora.cpp). The main ribbon spans 508 world units with a height of 138 before animated deformation and soft fades; the supporting curtains also extend farther across the sky. Sine and procedural noise functions animate folds and detail over those curves. Taller vertical rays, brighter lower edges and traveling bright pulses give the curtains their changing appearance.
 
-`U` controls visibility, `Up`/`Down` set intensity from 0 to 2, and `Left`/`Right` set speed from 0.1 to 2.5. An accumulated aurora clock prevents phase jumps when speed changes; `T` freezes that clock, the waves, beacon sweep and plane animation. The window title shows brightness, speed and pause state.
+The additive pass retains mountain occlusion and is included in the lake reflection. It adds visible emission without illuminating terrain materials or using an HDR/bloom pipeline; the directional light and lighthouse beacon provide the material lighting.
+
+`U` controls visibility, `C` cycles Green → Blue → Orange → Green, `Up`/`Down` set intensity from 0 to 2, and `Left`/`Right` set speed from 0.1 to 2.5. `--aurora-color green|blue|orange` selects the initial palette. Local colour variation stays within the chosen palette, which is also used by the reflected pass. An accumulated aurora clock prevents phase jumps when speed changes; `T` freezes that clock, the waves, beacon sweep and plane animation. The window title shows palette, brightness, speed and pause state. CPU tests cover the Bézier evaluator; graphics and interaction evidence belongs in [VALIDATION.md](VALIDATION.md).
 
 ### Lake
 
@@ -55,7 +57,7 @@ Review the beacon brightness and colour against the shared night palette on team
 | R3: transforms and hierarchy | Camera view/projection and model transforms; the tower → lamp → beam hierarchy drives the lamp mesh, the beam and the beacon from one matrix | Integrate campfire children and boat → lantern when those objects return; derive the lantern light position from its world transform the way the beacon derives its own. |
 | R4: lighting | Two sources: the adjustable directional moonlight, flat on the terrain and with a Blinn-Phong lobe on the water, and the beacon - a moving, switchable spot light with cone, distance and range falloff, per fragment on terrain, water and tower | Add the visible moon and the campfire, give the terrain its specular term, and fold both lights into shared `Lights` data when the campfire and lantern join them. |
 | R5: textures/equivalent | Grayscale heightmap input, per-face height/slope colours, procedural water normals and aurora, and a mipmapped six-face cubemap used by the sky and lake | Integrate the existing Texture wrapper, UV validation and terrain/log/tent textures with mipmaps. |
-| R6: interaction | Fly camera, directional-light keys, beacon toggle and sweep speed, aurora visibility/brightness/speed, shared animation pause, reflection toggle, wireframe and mouse capture | Add scene controls alongside their respective objects, then on-screen help and cinematic glide. |
+| R6: interaction | Fly camera, directional-light keys, beacon toggle and sweep speed, aurora visibility/palette/brightness/speed, shared animation pause, reflection toggle, wireframe and mouse capture | Add scene controls alongside their respective objects, then on-screen help and cinematic glide. |
 | R7: real-time performance | Window-title FPS counter; static geometry buffers | Measure average/minimum FPS at 1280×720 on named machines; profile slow passes before adding complexity. |
 | R8: reproducible build | CMake project, bundled sources with version/hash manifest, test commands, resource copying and platform CI configuration | Record clean-build results on Windows and macOS; verify runtime from a different working directory and failure diagnostics. |
 
@@ -64,7 +66,7 @@ Review the beacon brightness and colour against the shared night palette on team
 ### 1. Validate and review the night environment
 
 - Repeat Release/Debug builds, CPU tests and the graphics smoke test after future renderer changes; the 2026-11-07 local checks passed.
-- Check mouse capture, resize/minimize behaviour, camera speed, `[`/`]` light rotation, `R` reflections, `P` wireframe, `U` aurora, arrow-key brightness/speed and `T` animation pause.
+- Check mouse capture, resize/minimize behaviour, camera speed, `[`/`]` light rotation, `R` reflections, `P` wireframe, `U` aurora, `C` palette, arrow-key brightness/speed and `T` animation pause.
 - Review the mountain silhouettes, peak sharpness, facet size and palette before adding other scene objects. Check the mesh from multiple camera angles for cracks or reversed faces, and inspect the fog transition when looking toward or moving near the outer terrain.
 - Review the lake: shoreline shape from the air and from the bank, wave scale, how much of the bed shows through, the highlight as `[` / `]` sweep it, and the view from under the surface.
 - Extend the automated camera-view and missing-face checks with interactive review of sky seams, reflection and fog; mismatched-face diagnostics remain to be exercised.
@@ -83,7 +85,7 @@ Review the beacon brightness and colour against the shared night palette on team
 
 ### 3. Extend cinematic presentation and scene interaction
 
-- Review the implemented aurora from multiple camera positions and over longer animation intervals: folded silhouettes, soft fades, fine rays, local colour changes and reflected movement. Check arrow-key settings and pause on team machines.
+- Review the implemented aurora from multiple camera positions and over longer animation intervals: Bézier silhouettes, extended height and span, soft fades, traveling pulses, local colour changes and reflected movement. Check all three palettes, arrow-key settings and pause on team machines.
 - Add the Catmull-Rom camera glide and its aurora-intensity ramp. Manual camera input should have a clearly defined effect on glide mode.
 - Preserve the shared pause behaviour as new animated objects are introduced, and add on-screen help. Keep the README, terminal help and on-screen controls consistent; inactive future bindings should stay marked as planned.
 - Decide whether mouse-drag moon control and ImGui are useful after the core controls are complete.

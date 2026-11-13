@@ -23,6 +23,7 @@ struct SceneSettings {
     float auroraTime = 0.0f;
     float auroraSpeed = 1.0f;
     bool aurora = true;
+    AuroraPalette auroraPalette = AuroraPalette::Green;
     bool wireframe = false;
     bool reflections = true;
 

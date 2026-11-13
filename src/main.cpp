@@ -28,17 +28,20 @@ void printHelp() {
     std::cout << "\nMountain Lake & Aurora - dancing lights over the lake\n"
         << "WASD move | Space/Ctrl up/down | Shift faster | Mouse look | Wheel zoom\n"
         << "Tab capture/release mouse | [ / ] light direction | T pause animation\n"
-        << "U aurora on/off | Up/Down aurora brightness | Left/Right aurora speed\n"
+        << "U aurora on/off | C aurora color: green / blue / orange\n"
+        << "Up/Down aurora brightness | Left/Right aurora speed\n"
         << "L lighthouse beacon on/off | , / . sweep slower/faster\n"
         << "P wireframe | R reflections | H console help | Esc quit\n"
         << "Current scene: terrain, starry sky, lake, aurora, pines, lighthouse and plane.\n"
-        << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm> | --help\n";
+        << "CLI: --smoke-test | --resources <folder> | --capture <frame.ppm>\n"
+        << "     --aurora-color <green|blue|orange> | --help\n";
 }
 
 struct Options {
     bool smoke = false;
     fs::path resources;
     fs::path capture;
+    mla::AuroraPalette auroraPalette = mla::AuroraPalette::Green;
 };
 
 Options parseOptions(int argc, char** argv) {
@@ -46,6 +49,13 @@ Options parseOptions(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         const std::string argument(argv[i]);
         if (argument == "--smoke-test") options.smoke = true;
+        else if (argument == "--aurora-color" && i + 1 < argc) {
+            const std::string color(argv[++i]);
+            if (color == "green") options.auroraPalette = mla::AuroraPalette::Green;
+            else if (color == "blue") options.auroraPalette = mla::AuroraPalette::Blue;
+            else if (color == "orange") options.auroraPalette = mla::AuroraPalette::Orange;
+            else throw std::runtime_error("Aurora color must be green, blue or orange: " + color);
+        }
         else if ((argument == "--resources" || argument == "--capture") && i + 1 < argc) {
             if (argument == "--resources") options.resources = fs::path(argv[++i]);
             else options.capture = fs::path(argv[++i]);
@@ -157,6 +167,14 @@ void attachInput(GLFWwindow* window, Input& state, bool smoke) {
         case GLFW_KEY_P: state.scene.wireframe = !state.scene.wireframe; break;
         case GLFW_KEY_R: state.scene.reflections = !state.scene.reflections; break;
         case GLFW_KEY_U: state.scene.aurora = !state.scene.aurora; break;
+        case GLFW_KEY_C:
+            switch (state.scene.auroraPalette) {
+            case mla::AuroraPalette::Green: state.scene.auroraPalette = mla::AuroraPalette::Blue; break;
+            case mla::AuroraPalette::Blue: state.scene.auroraPalette = mla::AuroraPalette::Orange; break;
+            case mla::AuroraPalette::Orange: state.scene.auroraPalette = mla::AuroraPalette::Green; break;
+            }
+            std::cout << "Aurora color: " << mla::auroraPaletteName(state.scene.auroraPalette) << '\n';
+            break;
         case GLFW_KEY_T: state.paused = !state.paused; break;
         case GLFW_KEY_L: state.scene.beacon = !state.scene.beacon; break;
         case GLFW_KEY_H: printHelp(); break;
@@ -216,6 +234,7 @@ int run(const Options& options, const char* executable) {
     std::cout << "OpenGL " << glGetString(GL_VERSION) << " | " << glGetString(GL_RENDERER)
               << "\nResources: " << resources.string() << '\n';
     Input state;
+    state.scene.auroraPalette = options.auroraPalette;
     // Frame the tall aurora above the ridgeline while retaining the lake below.
     state.camera.look(0.0f, 50.0f);
     attachInput(window.handle, state, options.smoke);
@@ -283,7 +302,8 @@ int run(const Options& options, const char* executable) {
             std::ostringstream title;
             title << "Mountain Lake & Aurora | " << std::fixed << std::setprecision(0)
                   << titleFrames / (now - titleTime) << " FPS | Night lake, pines, lighthouse and plane | Aurora "
-                  << (state.scene.aurora ? "on" : "off") << " | Brightness "
+                  << (state.scene.aurora ? "on" : "off") << " | "
+                  << mla::auroraPaletteName(state.scene.auroraPalette) << " | Brightness "
                   << std::setprecision(0) << state.scene.auroraIntensity * 100.0f << "% | Speed "
                   << std::setprecision(1) << state.scene.auroraSpeed << "x"
                   << (state.paused ? " | Paused" : "");

@@ -5,6 +5,7 @@ flat in float vCurtain;
 uniform float uTime;
 uniform float uSpeed;
 uniform float uIntensity;
+uniform int uPalette;
 uniform vec3 uCameraPosition;
 out vec4 fragColor;
 
@@ -55,10 +56,10 @@ void main() {
     float lower = 0.12 + 0.009 * sin(u * 36.0 + phase + t * 0.13)
                        + (noise(vec2(u * 21.0 + phase, t * 0.04)) - 0.5) * 0.016;
     float altitude = v - lower;
-    float rayLength = 0.53 + 0.38 * noise(vec2(flow * 24.0 + phase, t * 0.06));
+    float rayLength = 0.68 + 0.26 * noise(vec2(flow * 24.0 + phase, t * 0.06));
     float foot = smoothstep(-0.008, 0.035, altitude);
     float tips = 1.0 - smoothstep(rayLength * 0.45, rayLength, max(altitude, 0.0));
-    float body = foot * exp(-max(altitude, 0.0) * 2.1) * tips * rays;
+    float body = foot * exp(-max(altitude, 0.0) * 1.75) * tips * rays;
     float veil = foot * exp(-max(altitude, 0.0) * 2.8)
                * (1.0 - smoothstep(0.40, 0.92, v)) * 0.12;
     float rim = gaussian(altitude, 0.022) * (0.72 + 0.28 * strands);
@@ -66,24 +67,39 @@ void main() {
     float edges = smoothstep(0.0, 0.13, u) * smoothstep(0.0, 0.16, 1.0 - u)
                 * smoothstep(0.0, 0.035, v) * (1.0 - smoothstep(0.83, 1.0, v));
 
-    // Green remains the foundation. Teal washes travel along each curtain;
-    // violet/rose appears locally in the higher, thinner rays.
+    // Each palette keeps a bright lower arc and softer high-altitude rays.
+    // Local colour washes travel along the same geometry in both passes.
     float tide = 0.5 + 0.5 * sin(u * 7.5 + phase - t * 0.10
                                  + 1.1 * sin(u * 3.0 + t * 0.035));
-    vec3 green = vec3(0.13, 0.89, 0.38);
-    vec3 teal = vec3(0.07, 0.70, 0.79);
-    vec3 lowerColor = mix(green, teal, smoothstep(0.22, 0.91, tide) * 0.88);
+    vec3 base = vec3(0.13, 0.89, 0.38);
+    vec3 accent = vec3(0.07, 0.70, 0.79);
+    vec3 high = vec3(0.40, 0.20, 0.78);
+    vec3 highAccent = vec3(0.78, 0.22, 0.51);
+    if (uPalette == 1) {
+        base = vec3(0.08, 0.30, 1.00);
+        accent = vec3(0.12, 0.75, 1.00);
+        high = vec3(0.33, 0.20, 0.95);
+        highAccent = vec3(0.60, 0.43, 1.00);
+    } else if (uPalette == 2) {
+        base = vec3(1.00, 0.25, 0.045);
+        accent = vec3(1.00, 0.58, 0.12);
+        high = vec3(0.95, 0.18, 0.24);
+        highAccent = vec3(0.90, 0.35, 0.60);
+    }
+    vec3 lowerColor = mix(base, accent, smoothstep(0.22, 0.91, tide) * 0.88);
     float violetPatch = smoothstep(0.32, 0.88,
         0.5 + 0.5 * sin(u * 10.0 - phase * 0.7 + t * 0.065));
-    vec3 violet = mix(vec3(0.40, 0.20, 0.78), vec3(0.78, 0.22, 0.51),
+    vec3 upperWash = mix(high, highAccent,
                      0.5 + 0.5 * sin(u * 5.0 + phase + t * 0.055));
-    vec3 upperColor = mix(teal, violet, 0.30 + violetPatch * 0.70);
+    vec3 upperColor = mix(accent, upperWash, 0.30 + violetPatch * 0.70);
     vec3 bodyColor = mix(lowerColor, upperColor,
                         smoothstep(0.02, 0.40, altitude) * (0.55 + 0.45 * violetPatch));
     float breath = 0.84 + 0.16 * sin(t * 0.12 + u * 9.0 + phase);
     float strength = id < 0.5 ? 1.0 : (id < 1.5 ? 0.48 : 0.61);
-    vec3 emission = lowerColor * (rim * 0.44 + halo * 0.16)
-                  + bodyColor * (body * 1.30 + veil);
+    // Broad pulses run along the arc without moving or flickering the rays.
+    float surge = pow(0.5 + 0.5 * sin(u * 12.0 - t * 0.22 + phase), 5.0);
+    vec3 emission = lowerColor * (rim * (0.50 + 0.12 * surge) + halo * 0.18)
+                  + bodyColor * (body * (1.45 + 0.20 * surge) + veil);
     // A thin sheet folds to zero projected width at grazing angles. Fade that
     // silhouette smoothly so overlapping folds do not begin with a hard bright
     // slat. The mirrored eye makes this work identically in the lake pass.

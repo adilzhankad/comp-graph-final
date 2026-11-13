@@ -165,6 +165,7 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
         auroraShader_.set("uTime", settings.auroraTime);
         auroraShader_.set("uSpeed", 1.0f);
         auroraShader_.set("uIntensity", settings.auroraIntensity);
+        auroraShader_.set("uPalette", static_cast<int>(settings.auroraPalette));
         aurora_.draw();
         glDisable(GL_BLEND);
     }

@@ -1,6 +1,25 @@
 # Mountain-lake scene validation
 
-Updated 2026-11-14. The combined scene includes low-poly terrain, a starry sky, three animated aurora curtains, instanced pine trees, a sweeping lighthouse beacon and a plane with blinking lights, with planar lake reflections. The dated sections below preserve the checks performed on each feature; they do not by themselves establish validation of the merged scene.
+Updated 2026-11-14. The combined scene includes low-poly terrain, a starry sky, three animated aurora curtains, instanced pine trees, a sweeping lighthouse beacon and a plane with blinking lights, with planar lake reflections. The first section records validation of the combined scene. Later dated sections preserve earlier per-feature evidence.
+
+## Combined scene, Bézier curtains and palettes — 2026-11-14
+
+Merged `origin/main` at `a447bd0` into `feat/aurora`, retaining the forest, lighthouse and plane. The aurora now uses three joined cubic Bézier segments per curtain, sampled into 480 × 24 cells per sheet (69,120 triangles across three sheets). The primary horizontal span is 508 units, with nominal height 138; vertical variation and animated displacement modify the final mesh. Green, blue and orange palettes share the same geometry and reflected rendering.
+
+| Check | Result |
+|---|---|
+| Windows x64 builds | Release and Debug passed with MSVC 19.44; no compiler warnings reported |
+| CPU tests | 3/3 passed in both configurations: camera/hierarchy/beacon/Bézier, heightmap and forest placement |
+| Bézier coverage | Endpoint and known curved interior samples, out-of-plane handle influence and tangent continuity across joined segments passed |
+| Application graphics smoke | Release passed for all three palettes; Debug passed with orange. Four hidden-window frames per run, shader compilation/linking and OpenGL error checks passed |
+| GPU | Intel Iris Xe Graphics, OpenGL 3.3.0, driver 32.0.101.6913 |
+| Palette rendering | Temporary Release harness confirmed changes in both the upper sky and lower lake; blue emission was blue-dominant and orange emission red-dominant |
+| Effect isolation | Disabled aurora and zero intensity matched exactly; palette changes had no effect while aurora was off. With planar reflections disabled, palette changes left the lower lake unchanged |
+| Animation and state | Changing only aurora time changed sky and lake; fixed-time frames were deterministic. Filled render after wireframe matched the original; framebuffer, viewport, depth, blend, clipping, polygon and active texture state checks passed |
+| Input handlers | The application's registered key callback passed `C` Green → Blue → Orange → Green, repeat/release filtering, and `U`, `R`, `T` toggles |
+| Visual review | Green, blue and orange 1280 × 720 application captures reviewed with the forest, lighthouse and plane present; enlarged curtains and corresponding coloured lake reflections are visible |
+
+`preview.png` is the green Release application capture from `--smoke-test --aurora-color green --capture`, converted losslessly from PPM to PNG. The temporary harness lives under the ignored build directory and invokes registered callbacks directly; physical keyboard/mouse delivery was not tested. No FPS benchmark, cross-platform run or GitHub CI result is claimed for this pass.
 
 ## Soft aurora curtains and flowing colour — 2026-11-11
 
