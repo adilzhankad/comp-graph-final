@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "Lake.h"
 #include "Lighthouse.h"
+#include "Plane.h"
 #include "ReflectionTarget.h"
 #include "Shader.h"
 #include "Skybox.h"
@@ -49,6 +50,7 @@ private:
     Terrain terrain_;
     Lake lake_;
     Lighthouse lighthouse_;
+    Plane plane_;
     Skybox skybox_;
     ReflectionTarget reflection_;
     Shader terrainShader_;

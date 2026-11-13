@@ -49,6 +49,7 @@ Scene::Scene(const std::filesystem::path& root)
     : terrain_(root / "assets/heightmaps/mountain_lake.pgm"),
       lake_(terrain_.heights()),
       lighthouse_(terrain_.heights(), lighthouseAnchor, lighthouseYaw),
+      plane_(),
       skybox_(root / "assets/skybox/stars"),
       terrainShader_(root / "shaders/terrain.vert", root / "shaders/terrain.frag"),
       lakeShader_(root / "shaders/lake.vert", root / "shaders/lake.frag"),
@@ -102,6 +103,13 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
     objectShader_.set("uLightDirection", light);
     applyBeacon(objectShader_, beacon);
     for (const auto& part : lighthouse_.parts()) {
+        objectShader_.set("uModel", part.model);
+        objectShader_.set("uColor", part.color);
+        objectShader_.set("uEmission", part.emission);
+        part.mesh->draw();
+    }
+
+    for (const auto& part : plane_.parts()) {
         objectShader_.set("uModel", part.model);
         objectShader_.set("uColor", part.color);
         objectShader_.set("uEmission", part.emission);
