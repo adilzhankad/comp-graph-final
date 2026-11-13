@@ -42,6 +42,7 @@ private:
     std::vector<Piece> pieces_;
     std::vector<Part> parts_;
     glm::mat4 model_{1.0f};
+    float blink_ = 0.0f;      // 1 while the navigation lights are on
 };
 
 } // namespace mla

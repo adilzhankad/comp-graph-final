@@ -16,6 +16,9 @@ constexpr float radius = 85.0f;
 constexpr float altitude = 48.0f;
 constexpr float lapSeconds = 52.0f;
 constexpr float bank = 0.2f;        // leaned into the turn
+// Navigation lights: a short flash, a long gap.
+constexpr float blinkEvery = 1.3f;
+constexpr float blinkFor = 0.12f;
 // Where it starts its lap: in front of the camera rather than behind it.
 constexpr float startAngle = tau * .55f;
 
@@ -55,6 +58,7 @@ void Plane::update(float time) {
     model_ = glm::rotate(glm::translate(glm::mat4(1.0f), position), angle + tau * .25f,
                          glm::vec3(0.0f, 1.0f, 0.0f));
     model_ = glm::rotate(model_, bank, glm::vec3(0.0f, 0.0f, 1.0f));
+    blink_ = std::fmod(time, blinkEvery) < blinkFor ? 1.0f : 0.0f;
     refresh();
 }
 
@@ -67,7 +71,8 @@ void Plane::refresh() {
         const auto& piece = pieces_[i];
         // The mesh address is taken here: the vector may still move its
         // elements while the plane is being built.
-        parts_[i] = Part{&piece.mesh, model_ * piece.offset, piece.color, piece.emission};
+        parts_[i] = Part{&piece.mesh, model_ * piece.offset, piece.color,
+                         piece.emission * blink_};
     }
 }
 
