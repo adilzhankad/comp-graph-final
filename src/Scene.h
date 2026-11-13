@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Camera.h"
+#include "Forest.h"
 #include "Lake.h"
 #include "Lighthouse.h"
 #include "ReflectionTarget.h"
@@ -50,11 +51,13 @@ private:
     Lake lake_;
     Lighthouse lighthouse_;
     Skybox skybox_;
+    Forest forest_;
     ReflectionTarget reflection_;
     Shader terrainShader_;
     Shader lakeShader_;
     Shader skyboxShader_;
     Shader objectShader_;
+    Shader treeShader_;
     Shader beamShader_;
 };
 
