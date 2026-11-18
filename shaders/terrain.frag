@@ -30,6 +30,11 @@ void main() {
     float skyFill = 0.5 + 0.5 * n.y;
     vec3 ambient = mix(vec3(0.035, 0.05, 0.085), vec3(0.09, 0.12, 0.18), skyFill);
     vec3 color = base * (ambient + vec3(0.48, 0.62, 0.90) * diffuse * 0.34);
+    // Блик (specular): снег и скалы слегка блестят под луной
+    vec3 viewDir = normalize(uCameraPosition - vPosition);
+    vec3 halfDir = normalize(normalize(uLightDirection) + viewDir);
+    float spec = pow(max(dot(n, halfDir), 0.0), 24.0);
+    color += vec3(0.48, 0.62, 0.90) * spec * (0.03 + 0.12 * snowWeight + 0.05 * rockWeight);
     // Second light: the lighthouse beam sweeping over the ground. The patch of
     // light moves smoothly because the lamp distance is interpolated, while the
     // face's own cosine term stays flat with the rest of the shading.
