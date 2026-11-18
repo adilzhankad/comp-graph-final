@@ -14,6 +14,8 @@ namespace {
 
 const glm::vec3 planks{0.33f, 0.22f, 0.14f};
 const glm::vec3 trim{0.24f, 0.16f, 0.11f};
+const glm::vec3 coat{0.21f, 0.25f, 0.33f};
+const glm::vec3 skin{0.58f, 0.46f, 0.38f};
 
 // Where the boat sits on the lake, and which way it points.
 const glm::vec3 moorings{-15.0f, world::waterLevel - 0.1f, 1.0f};
@@ -76,12 +78,19 @@ Boat::Boat() {
     root_.local = glm::rotate(glm::translate(glm::mat4(1.0f), moorings), heading,
                               glm::vec3(0.0f, 1.0f, 0.0f));
 
-    pieces_.reserve(4);
+    pieces_.reserve(8);
     add(hull(), glm::mat4(1.0f), root_, planks);
     // Gunwale rail along both sides, and two thwarts to sit on.
     add(primitives::cube(), box({-1.02f, 0.34f, -0.3f}, {0.16f, 0.14f, 5.6f}), root_, trim);
     add(primitives::cube(), box({1.02f, 0.34f, -0.3f}, {0.16f, 0.14f, 5.6f}), root_, trim);
     add(primitives::cube(), box({0.0f, 0.12f, -1.1f}, {1.95f, 0.14f, 0.5f}), root_, trim);
+
+    // Someone sitting on the thwart, facing the bow.
+    add(primitives::cube(), box({0.0f, 0.30f, -0.52f}, {0.50f, 0.24f, 1.05f}), root_, coat);
+    add(primitives::cube(), box({0.0f, 0.62f, -1.16f}, {0.52f, 0.76f, 0.38f}), root_, coat);
+    add(primitives::cube(), box({0.0f, 1.14f, -1.18f}, {0.30f, 0.30f, 0.28f}), root_, skin);
+    add(primitives::cube(), box({-0.34f, 0.66f, -0.78f}, {0.15f, 0.15f, 0.80f}), root_, coat);
+    add(primitives::cube(), box({0.34f, 0.66f, -0.78f}, {0.15f, 0.15f, 0.80f}), root_, coat);
 
     parts_.resize(pieces_.size());
     root_.updateWorld();
