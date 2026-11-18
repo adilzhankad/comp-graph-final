@@ -114,6 +114,13 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
         part.mesh->draw();
     }
 
+    for (const auto& part : boat_.parts()) {
+        objectShader_.set("uModel", part.model);
+        objectShader_.set("uColor", part.color);
+        objectShader_.set("uEmission", part.emission);
+        part.mesh->draw();
+    }
+
     for (const auto& part : plane_.parts()) {
         objectShader_.set("uModel", part.model);
         objectShader_.set("uColor", part.color);
