@@ -479,8 +479,10 @@ Every member commits their own work regularly throughout the project and can exp
 
 | Machine | CPU | GPU | OS | Resolution | Avg FPS | Min FPS |
 |---|---|---|---|---|---|---|
-| | | | | 1280×720 | | |
+| MacBook Air (M2, 2022), 16 GB, reflections: scene | Apple M2 | Apple M2 (integrated) | macOS Sequoia 15.7.7 | 1280×720 | 119 | 119 |
+| MacBook Air (M2, 2022), 16 GB, reflections: sky only | Apple M2 | Apple M2 (integrated) | macOS Sequoia 15.7.7 | 1280×720 | 119 | 115 |
 
+Measured in Release build with vsync on (display refresh 120 Hz), so FPS is capped at about 120. Values were read from the window title during free flight over the scene (4 samples: 120, 119, 115, 121).
 ---
 
 ## Credits
