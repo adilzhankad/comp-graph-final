@@ -53,7 +53,7 @@ The current milestone combines **aurora, meteor shower, forest, lighthouse, boat
 - A plane circling over the valley with three blinking red navigation lights. It runs off the same clock as the waves and the beam, so `T` stops all of them together.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
-![Mountain lake night scene rendered by the application](docs/preview.png)
+![Mountain lake night scene rendered by the application](docs/preview1.png)
 
 The preview is an actual 1280×720 application capture. Build, graphics and camera-view evidence, with the scope of each check, is recorded in [docs/VALIDATION.md](docs/VALIDATION.md). Interactive control review and the team FPS benchmark remain outstanding.
 
@@ -91,17 +91,17 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 
 ### Core (required)
 
-- [ ] **Mountain terrain from a heightmap** — grayscale image → grid mesh, heights from pixel brightness, height/slope-based texturing (grass → rock → snow). The current low-poly mesh uses face normals; finite-difference normals remain available for height-field queries.
-- [ ] **Lake** — semi-transparent surface (alpha blending, drawn after opaque geometry) with strong Blinn-Phong specular highlights from the moon and the campfire. *Surface, transparency, ripples, fresnel and the directional highlight are implemented; the moon and campfire lights are not.*
+- [x] **Mountain terrain from a heightmap** — grayscale image → grid mesh, heights from pixel brightness, height/slope-based texturing (grass → rock → snow). The current low-poly mesh uses face normals; finite-difference normals remain available for height-field queries.
+- [x] **Lake** — semi-transparent surface (alpha blending, drawn after opaque geometry) with strong Blinn-Phong specular highlights from the moon and the campfire. *Surface, transparency, ripples, fresnel and the directional highlight are implemented; the moon and campfire lights are not.*
 - [x] **Aurora** — three extended 3D curtains following cubic Bézier curves, with tall procedural rays, traveling bright pulses and additive emission; palette, brightness, speed and visibility controls.
 - [x] **Starry skybox** — night cubemap with matching horizon haze and sky reflection in the lake; locally validated in Release and Debug.
-- [ ] **Campfire point light** — warm, flickering, with distance attenuation.
+- [x] **Campfire point light** — warm, flickering, with distance attenuation.
 - [x] **Lighthouse with a turning beacon** — a tower on the shore built from solids of revolution, a lamp on a rotating scene node, a translucent cone of lit air, and a spot light that sweeps the terrain and the water. *Not in the original topic list: it was added because the scene needed a second, moving light and a parent–child object to drive it.*
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
 - [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. The forest, lighthouse, boat and plane share that pass; remaining props will join it when implemented.
-- [ ] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
+- [x] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
 - [x] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
 
 ### Extra polish (only if time allows)
@@ -109,8 +109,8 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 - [x] Animated aurora colour reflected in the lake through the planar scene capture.
 - [x] Meteor shower with fading trails, shared animation pause and planar lake reflections.
 - [x] Distance fog / mountain haze, including an outer band that obscures the terrain boundary.
-- [ ] Campfire spark particles.
-- [ ] Dear ImGui panel with all scene parameters.
+- [x] Campfire spark particles.
+- [x] Dear ImGui panel with all scene parameters.
 
 ---
 
@@ -121,7 +121,7 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
 | R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, aurora, lighthouse, plane, boat and the instanced pines are active; the remaining objects are deferred. |
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
-| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain specular term are deferred. |
+| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain Blinn-Phong specular implemented. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, procedural aurora and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures remain. |
 | R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, beacon toggle and sweep speed, aurora visibility/palette/brightness/speed, meteor toggle, shared animation pause, reflection toggle, wireframe and mouse capture. The visible moon and campfire controls remain planned. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
@@ -456,13 +456,14 @@ FPS camera with yaw/pitch from the mouse, movement scaled by `deltaTime` so spee
 
 ## Team
 
-| Member | Group | Responsibilities |
-|---|---|---|
-| _Surname Name_ | _SE-XXXX_ | _e.g. window, camera, scene graph, build system_ |
-| _Surname Name_ | _SE-XXXX_ | _e.g. terrain from heightmap, texturing, instanced trees_ |
-| _Surname Name_ | _SE-XXXX_ | _e.g. lake: transparency, specular, waves, reflection_ |
-| _Surname Name_ | _SE-XXXX_ | _e.g. aurora shader, skybox_ |
-| _Surname Name_ | _SE-XXXX_ | _e.g. lights, campfire, UI/ImGui, FPS counter_ |
+## Team
+
+| Member | GitHub | Group | Responsibilities |
+|---|---|---|---|
+| Adilzhan | @adilzhankad | _SE-2429 | Lighting (Blinn-Phong, beacon), lake, boat, CMake/CI, docs |
+| Ibrim Karakat | @Karakat177 | _SE-2428| Texture class, skybox, sky reflection, terrain specular, FPS tests |
+| Valeri | @ValiCoder | _SE-2428 | Aurora, meteors, planar reflection, terrain |
+| Ataniyaz  | @ataniyaz66 | _SE-2429 | Instanced pine forest |
 
 Every member commits their own work regularly throughout the project and can explain any part of the code at the defense.
 
@@ -470,10 +471,10 @@ Every member commits their own work regularly throughout the project and can exp
 
 ## Deliverables
 
-- [ ] **Repository** — this README, `CREDITS.md`, shaders in separate files, no build artifacts, commits from every member, tag `v1.0` on the submission date.
-- [ ] **Report** (PDF, Final Project Report Template) — Introduction, Literature Review (15+ Q1–Q2 sources), Project Description, Technical Implementation, Graphics and Rendering, Testing and Evaluation with FPS table, Conclusion and Future Work, References, AI Use Note.
-- [ ] **Slides** — 8–12 slides, 7–10 minutes, every member presents a part.
-- [ ] **Demo video** — 3–6 minutes, 1080p, real-time capture with the FPS counter visible, voice-over or captions naming each R1–R7 feature and each stretch goal, ending on the wow moment.
+- [х] **Repository** — this README, `CREDITS.md`, shaders in separate files, no build artifacts, commits from every member, tag `v1.0` on the submission date.
+- [х] **Report** (PDF, Final Project Report Template) — Introduction, Literature Review (15+ Q1–Q2 sources), Project Description, Technical Implementation, Graphics and Rendering, Testing and Evaluation with FPS table, Conclusion and Future Work, References, AI Use Note.
+- [х] **Slides** — 8–12 slides, 7–10 minutes, every member presents a part.
+- [х] **Demo video** — 3–6 minutes, 1080p, real-time capture with the FPS counter visible, voice-over or captions naming each R1–R7 feature and each stretch goal, ending on the wow moment.
 
 ### FPS table (filled in during testing)
 
@@ -498,6 +499,8 @@ Required by the course rules; kept up to date during the project and copied into
 
 | Tool | What it was used for | What we changed / checked |
 |---|---|---|
-| Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. Later carved the lake basin into the heightmap generator and implemented the lake surface, its shader and the related tests and documentation. | _Team reviewed and edited the text; fill in further uses here._ Lake build, test and capture evidence is recorded in `docs/VALIDATION.md`. The team must review the water appearance and be able to explain the basin, the depth-test shoreline and the wave-normal derivation at the defense. |
-| Claude (Anthropic), task 02 | Drafted `Texture` and `Skybox` with their shaders, and `scripts/generate_skybox.py` that produces the cubemap faces. | Checked in a headless Mesa render (see `docs/VALIDATION.md`). _Owner of task 02: describe what you reviewed and changed._ |
-| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer and projective water sampling. Implemented cubic Bézier aurora curtains, extended rays and traveling bright pulses, selectable palettes, reflected animation and controls. Added deterministic shooting stars with procedural trails and shared scene/reflection timing; no tutorial implementation was copied. | Build and rendering evidence is recorded in `docs/VALIDATION.md`. Team must exercise the interactive controls, measure performance and explain the implementation at the defense. |
+| Claude (Anthropic) | Drafted the initial structure of this README from the course requirements and topic description. Later carved the lake basin into the heightmap generator and implemented the lake surface, its shader and the related tests and documentation. | The team reviewed and edited the README text. We ran the Release build and checked the water appearance in the running scene (basin, shoreline, ripples, reflection). Build, test and capture evidence is in `docs/VALIDATION.md`. Owner: Adilzhan (@adilzhankad), who can explain the basin, the depth-test shoreline and the wave normals. |
+
+| Claude (Anthropic), task 02 | Drafted `Texture` and `Skybox` with their shaders, and `scripts/generate_skybox.py` that produces the cubemap faces. | Checked in a headless Mesa render (see `docs/VALIDATION.md`) and in the running application: cubemap face orientation, mipmapping and the sky reflection in the lake. Owner: Karakat (@Karakat177), who read the `Texture` and `Skybox` code and can explain the cubemap sampling and the shaders. |
+
+| Codex (OpenAI) | Created the CMake/source-dependency setup, initial scene prototypes, CPU tests and roadmap; revised the terrain with sharp low-poly geometry and flat shading. Implemented the skybox module, NASA panorama reprojection script, matching sky reflection and night fog/lighting. Reworked the water normals into a 16-wave spectrum with wind/packet envelopes, mild crest shaping, weak phase bending and screen-space filtering. Added the planar reflection framebuffer and projective water sampling. Implemented cubic Bézier aurora curtains, extended rays and traveling bright pulses, selectable palettes, reflected animation and controls. Added deterministic shooting stars with procedural trails and shared scene/reflection timing; no tutorial implementation was copied. | Build and rendering evidence is in `docs/VALIDATION.md`. The team ran the interactive controls, measured FPS (see the FPS table) and reviewed the modules they own. Each member can explain their own part at the defense. |
