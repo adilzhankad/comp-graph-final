@@ -31,7 +31,7 @@ Planned final scene: a real-time interactive landscape written in **C++** with *
 
 ## Status
 
-The current milestone combines **aurora, meteor shower, forest, lighthouse and plane over the mountain lake**: a low-poly landscape with sharp peaks, a rippling lake, a starry sky and soft animated aurora curtains, with instanced pines on the slopes, a sweeping lighthouse beacon, a plane circling above and intermittent shooting stars. The complete mountain-lake scene remains the final target.
+The current milestone combines **aurora, meteor shower, forest, lighthouse, boat and plane over the mountain lake**: a low-poly landscape with sharp peaks, a rippling lake, a starry sky and soft animated aurora curtains, with instanced pines on the slopes, a sweeping lighthouse beacon, a rowing boat on the water, a plane circling above and intermittent shooting stars. The complete mountain-lake scene remains the final target.
 
 - CMake builds GLFW and generated GLAD source locally; GLM and stb_image are bundled as source. No precompiled `.lib` or `.dll` files are needed.
 - OpenGL 3.3 core window, shader and indexed-mesh wrappers, fly camera, and a reusable scene-node hierarchy.
@@ -44,11 +44,12 @@ The current milestone combines **aurora, meteor shower, forest, lighthouse and p
 - A starry skybox using six 1024×1024 cubemap faces reprojected from NASA SVS's Deep Star Maps panorama, with mipmaps and seamless cubemap filtering.
 - Three extended aurora curtains built along cubic Bézier curves, with taller rays, traveling bright pulses, soft fading tips and selectable green, blue or orange palettes. The ribbons are separate animated 3D geometry, and the chosen palette appears in their lake reflection.
 - A meteor shower with bright heads and soft tapered trails, appearing at staggered intervals along downward paths. `M` toggles the shower and `T` pauses it with the rest of the scene.
-- Planar reflections of the mountains, shore, forest, lighthouse, plane, sky, animated aurora and meteors, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
+- Planar reflections of the mountains, shore, forest, lighthouse, boat, plane, sky, animated aurora and meteors, rendered from a mirrored camera and distorted by the water's ripples. `R` switches between scene reflections and the earlier sky-only reflection.
 - Blue night haze matches the sky horizon; smooth distance fog and an outer fog band blend the ground into it before the mesh boundary, and the water repeats the same fade.
 - A lighthouse on the shore, built from 18 low-poly sections and placed by sampling the terrain under it. Its lamp hangs under a scene node that turns, and the beam node under that aims the light down towards the water: one hierarchy drives the lamp, the cone of lit air and the light itself.
 - A second light source, and the first moving one: the beam is a spot light that sweeps the ground and the water, with the same cone the visible shaft is drawn with. `L` switches it off, `,` / `.` change how fast it turns, and `T` freezes it with the waves.
 - Instanced pine trees on the slopes, placed by height and slope from the heightmap.
+- A wooden rowing boat with someone sitting in it, rowing a slow lap of the lake and riding the swell.
 - A plane circling over the valley with three blinking red navigation lights. It runs off the same clock as the waves and the beam, so `T` stops all of them together.
 - Keyboard/mouse controls including a pausable animation clock, a window-title FPS counter, CPU tests, and a hidden-window graphics smoke-test mode.
 
@@ -61,7 +62,7 @@ Aurora is part of the application build and both the main and reflected scene. T
 | Milestone | What we show | Status |
 |---|---|---|
 | Team & topic registration | Topic name + every member in MS Teams | ☐ |
-| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake, starry sky, aurora, lighthouse, plane and pines implemented; validation scope is recorded below; remaining objects deferred |
+| Week 7 progress check | Window, camera, terrain, first objects | Terrain, lake, starry sky, aurora, lighthouse, plane, boat and pines implemented; validation scope is recorded below; remaining objects deferred |
 | Week 8 progress check | Lighting, textures, lake, aurora, interaction | ☐ |
 | Week 9 progress check | Almost finished project | ☐ |
 | Final submission (3 days before defense) | Tag `v1.0`, report PDF, slides, demo video | ☐ |
@@ -99,7 +100,7 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
 
-- [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. The forest, lighthouse and plane share that pass; remaining props will join it when implemented.
+- [x] **Real reflection in the lake** — the terrain, shore, sky and animated aurora render from a mirrored camera into a framebuffer texture, sampled with projective UVs and ripple distortion. The forest, lighthouse, boat and plane share that pass; remaining props will join it when implemented.
 - [ ] **Small waves on the lake** — vertex displacement by summed sines and/or scrolling normal map, so highlights and reflection ripple.
 - [x] **Instanced pine trees** — hundreds of trees with `glDrawElementsInstanced`, placed on the terrain by height and slope.
 
@@ -118,7 +119,7 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, aurora, lighthouse, plane and the instanced pines are active; the remaining objects are deferred. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, aurora, lighthouse, plane, boat and the instanced pines are active; the remaining objects are deferred. |
 | R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
 | R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain specular term are deferred. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, procedural aurora and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures remain. |
@@ -130,7 +131,7 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 
 ## Controls
 
-These controls apply to the current mountain-lake scene, including the aurora, meteor shower, lighthouse and plane. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
+These controls apply to the current mountain-lake scene, including the aurora, meteor shower, lighthouse, boat and plane. `H` prints help to the terminal; run from a terminal to see help and diagnostic messages.
 
 | Key / input | Action |
 |---|---|
@@ -147,7 +148,7 @@ These controls apply to the current mountain-lake scene, including the aurora, m
 | `Left` / `Right` | Decrease / increase aurora speed (0.1–2.5×) |
 | `L` | Lighthouse beacon on / off: the beam, the light it casts and the glow of the lamp |
 | `,` / `.` | Sweep slower / faster, from stopped to 12 turns per minute |
-| `T` | Pause / resume the waves, aurora, meteors, beacon sweep, plane and blinking lights |
+| `T` | Pause / resume the waves, aurora, meteors, beacon sweep, boat, plane and blinking lights |
 | `R` | Switch between full scene reflections and sky-only reflection; sky-only excludes mountains, props, aurora and meteors |
 | `P` | Wireframe on / off |
 | `H` | Print current controls to the terminal; on-screen help is planned |
@@ -259,6 +260,7 @@ comp-graph-final/
 │   ├── Skybox.h/.cpp     # owning cubemap and cube mesh, image validation
 │   ├── Lighthouse.h/.cpp # the tower, the turning lamp node and the beam cone
 │   ├── Plane.h/.cpp      # plane geometry, its circle and the blinking lights
+│   ├── Boat.h/.cpp       # lofted hull, the rower, and the lap it rows
 │   ├── Beacon.h/.cpp     # the lamp as a spot light; no OpenGL, so it is tested
 │   ├── Bezier.h          # reusable cubic Bézier evaluation, covered by CPU tests
 │   ├── MeteorMotion.h    # deterministic meteor paths and lifetimes
@@ -295,12 +297,12 @@ Rule of thumb for D2: one class per concept, no application source file over ~50
 
 ## Technical notes
 
-The active renderer captures the solid world, sky and aurora from a camera mirrored across the lake. It draws those same passes for the real camera, then a blended water pass sampling the reflection, and finally the additive lighthouse beam. `Scene::renderEnvironment` is shared by the main and reflected views, so the terrain, lighthouse, plane, forest, sky and aurora appear in both. The remaining campfire, tent, boat and cinematic features preserve the **planned final design** for later milestones.
+The active renderer captures the solid world, sky and aurora from a camera mirrored across the lake. It draws those same passes for the real camera, then a blended water pass sampling the reflection, and finally the additive lighthouse beam. `Scene::renderEnvironment` is shared by the main and reflected views, so the terrain, lighthouse, plane, boat, forest, sky and aurora appear in both. The remaining campfire, tent and cinematic features preserve the **planned final design** for later milestones.
 
 ### Render order per frame
 
 1. **Reflection pass:** mirror the camera across `y = waterLevel`, clip underwater terrain, then render terrain, lighthouse, plane, forest, sky and additive aurora into a framebuffer. The visible beam is excluded from this capture.
-2. **Opaque pass:** terrain, lighthouse, plane and instanced pine trees, with depth writes enabled.
+2. **Opaque pass:** terrain, lighthouse, boat, plane and instanced pine trees, with depth writes enabled.
 3. **Skybox:** depth test `GL_LEQUAL`, vertex depth placed at 1.0, depth writes disabled.
 4. **Aurora:** additive emission (`GL_ONE, GL_ONE`) with depth writes disabled; opaque geometry occludes the curtains. The shader outputs colour already weighted by intensity and fades.
 5. **Lake:** alpha blending with depth writes disabled, sampling the reflected scene.
