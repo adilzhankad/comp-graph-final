@@ -6,6 +6,7 @@
 #include "Lake.h"
 #include "Lighthouse.h"
 #include "MeteorShower.h"
+#include "Boat.h"
 #include "Plane.h"
 #include "ReflectionTarget.h"
 #include "Shader.h"
@@ -61,6 +62,7 @@ private:
     Lake lake_;
     Lighthouse lighthouse_;
     Plane plane_;
+    Boat boat_;
     Skybox skybox_;
     Aurora aurora_;
     MeteorShower meteors_;

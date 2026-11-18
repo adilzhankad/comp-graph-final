@@ -302,3 +302,21 @@ Added 2026-11-13, on the same machine as the lighthouse pass.
 Fixed while tuning: the first wing was 15.5 units across on a 9-unit fuselage, which from the valley floor read as a thin bar rather than a plane. The wing is now 12 units and thicker, the fuselage fatter, the lamps larger, and the circle was brought in from 85 to 72 units so the plane is not sitting in the far fog.
 
 The plane is drawn inside `renderEnvironment`, so the mirrored pass picks it up and it appears in the lake like the tower does. Interactive review is still a team task: how it reads while crossing the frame, whether the lap is too fast or too slow, and whether it should have a light the water can catch.
+
+## Boat and rower
+
+Added 2026-11-18, same machine as the other object passes.
+
+| Check | Result |
+|---|---|
+| Windows x64 Release and Debug | Both builds passed, no warnings |
+| CPU tests | All four suites passed in both configurations |
+| Graphics check | Hidden-window smoke test passed in both configurations |
+| Hull | Lofted through five cross-sections, each a rectangle from keel to gunwale, with the normal taken per quad. A floor quad closes the open hull so it is not see-through from the bank. |
+| Rower | Five boxes on the thwart: legs, torso, head and two arms. |
+| Motion | A 7-unit circle around `(-15, 1)` on the lake, one lap per 210 seconds, heading along the tangent, plus a 0.10 swell lift and small roll and pitch at 0.6 and 0.73 rad/s so the periods do not line up. |
+| Clock | Driven by `SceneSettings::time`, so `T` stops the boat with the waves. |
+
+Fixed while tuning: the hull first sat 0.1 below the water line, which left almost no freeboard and read as a swamped boat from the bank. It now floats 0.18 above it.
+
+The boat is drawn inside `renderEnvironment`, so it appears in the lake reflection with the tower and the pines. Still open for review: whether the lap is too slow to notice, and whether the rower should get the lantern the task brief asks for, which would also give the boat node a light to carry.

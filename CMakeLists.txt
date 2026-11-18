@@ -33,7 +33,7 @@ add_executable(MountainLakeAurora
     src/Texture.cpp
     src/Skybox.cpp src/ReflectionTarget.cpp src/Aurora.cpp src/MeteorShower.cpp
     src/Primitives.cpp src/Lighthouse.cpp src/Plane.cpp
-    src/Forest.cpp)
+    src/Forest.cpp src/Boat.cpp)
 target_link_libraries(MountainLakeAurora PRIVATE mla_core mla_glad glfw)
 target_compile_definitions(MountainLakeAurora PRIVATE GLFW_INCLUDE_NONE NOMINMAX)
 set_property(TARGET MountainLakeAurora PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:MountainLakeAurora>")

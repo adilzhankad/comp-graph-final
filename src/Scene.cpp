@@ -114,6 +114,13 @@ void Scene::renderEnvironment(const glm::mat4& view, const glm::mat4& projection
         part.mesh->draw();
     }
 
+    for (const auto& part : boat_.parts()) {
+        objectShader_.set("uModel", part.model);
+        objectShader_.set("uColor", part.color);
+        objectShader_.set("uEmission", part.emission);
+        part.mesh->draw();
+    }
+
     for (const auto& part : plane_.parts()) {
         objectShader_.set("uModel", part.model);
         objectShader_.set("uColor", part.color);
@@ -190,6 +197,7 @@ void Scene::render(const Camera& camera, float aspect, const SceneSettings& sett
     // mesh, the lamp and the light the shaders get all come out of the same one.
     lighthouse_.update(settings.beaconTurns);
     plane_.update(settings.time);
+    boat_.update(settings.time);
     const auto beacon = lighthouse_.beacon(settings.beacon);
 
     // Reflect world coordinates about y = waterLevel. Using V*M includes the

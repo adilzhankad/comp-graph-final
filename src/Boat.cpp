@@ -1,0 +1,129 @@
+#include "Boat.h"
+
+#include "Primitives.h"
+#include "World.h"
+
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <cmath>
+#include <cstdint>
+#include <utility>
+#include <vector>
+
+namespace mla {
+namespace {
+
+const glm::vec3 planks{0.33f, 0.22f, 0.14f};
+const glm::vec3 trim{0.24f, 0.16f, 0.11f};
+const glm::vec3 coat{0.21f, 0.25f, 0.33f};
+const glm::vec3 skin{0.58f, 0.46f, 0.38f};
+
+constexpr float tau = 6.28318530718f;
+// The boat rows a slow circle around this point on the lake.
+const glm::vec3 moorings{-15.0f, world::waterLevel + 0.18f, 1.0f};
+constexpr float drift = 7.0f;         // how far it wanders from there
+constexpr float lapSeconds = 210.0f;  // one slow lap
+constexpr float startAngle = 0.7f;
+
+// Cross-sections of the hull from the transom to the bow. Each one is a
+// rectangle: narrow at the keel, wider at the gunwale.
+struct Section {
+    float z, keelHalf, railHalf, keelY, railY;
+};
+const Section sections[] = {
+    {-2.90f, 0.62f, 0.86f, -0.42f, 0.30f},
+    {-1.20f, 0.80f, 1.10f, -0.52f, 0.32f},
+    { 0.60f, 0.78f, 1.08f, -0.52f, 0.32f},
+    { 2.40f, 0.45f, 0.72f, -0.40f, 0.36f},
+    { 3.40f, 0.07f, 0.14f, -0.16f, 0.42f},
+};
+
+glm::mat4 box(const glm::vec3& centre, const glm::vec3& size) {
+    return glm::scale(glm::translate(glm::mat4(1.0f), centre), size);
+}
+
+// A planked hull: one quad per plank between neighbouring sections, with the
+// normal taken from the quad itself so the facets stay flat like the terrain.
+Mesh hull() {
+    std::vector<Vertex> vertices;
+    std::vector<std::uint32_t> indices;
+    auto quad = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d) {
+        const glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
+        const auto start = static_cast<std::uint32_t>(vertices.size());
+        vertices.insert(vertices.end(), {{a, normal, {0, 0}}, {b, normal, {1, 0}},
+                                         {c, normal, {1, 1}}, {d, normal, {0, 1}}});
+        indices.insert(indices.end(), {start, start + 1, start + 2,
+                                       start, start + 2, start + 3});
+    };
+
+    const int count = static_cast<int>(sizeof(sections) / sizeof(sections[0]));
+    for (int i = 0; i + 1 < count; ++i) {
+        const Section& a = sections[i];
+        const Section& b = sections[i + 1];
+        quad({a.keelHalf, a.keelY, a.z}, {b.keelHalf, b.keelY, b.z},
+             {b.railHalf, b.railY, b.z}, {a.railHalf, a.railY, a.z});
+        quad({-a.railHalf, a.railY, a.z}, {-b.railHalf, b.railY, b.z},
+             {-b.keelHalf, b.keelY, b.z}, {-a.keelHalf, a.keelY, a.z});
+        quad({-a.keelHalf, a.keelY, a.z}, {-b.keelHalf, b.keelY, b.z},
+             {b.keelHalf, b.keelY, b.z}, {a.keelHalf, a.keelY, a.z});
+    }
+    // Transom, and a floor so the open hull is not see-through from the bank.
+    const Section& stern = sections[0];
+    quad({-stern.keelHalf, stern.keelY, stern.z}, {stern.keelHalf, stern.keelY, stern.z},
+         {stern.railHalf, stern.railY, stern.z}, {-stern.railHalf, stern.railY, stern.z});
+    quad({-0.78f, -0.28f, -2.80f}, {0.78f, -0.28f, -2.80f},
+         {0.52f, -0.28f, 2.60f}, {-0.52f, -0.28f, 2.60f});
+    return Mesh(vertices, indices);
+}
+
+} // namespace
+
+Boat::Boat() {
+    pieces_.reserve(8);
+    add(hull(), glm::mat4(1.0f), root_, planks);
+    // Gunwale rail along both sides, and two thwarts to sit on.
+    add(primitives::cube(), box({-1.02f, 0.34f, -0.3f}, {0.16f, 0.14f, 5.6f}), root_, trim);
+    add(primitives::cube(), box({1.02f, 0.34f, -0.3f}, {0.16f, 0.14f, 5.6f}), root_, trim);
+    add(primitives::cube(), box({0.0f, 0.12f, -1.1f}, {1.95f, 0.14f, 0.5f}), root_, trim);
+
+    // Someone sitting on the thwart, facing the bow.
+    add(primitives::cube(), box({0.0f, 0.30f, -0.52f}, {0.50f, 0.24f, 1.05f}), root_, coat);
+    add(primitives::cube(), box({0.0f, 0.62f, -1.16f}, {0.52f, 0.76f, 0.38f}), root_, coat);
+    add(primitives::cube(), box({0.0f, 1.14f, -1.18f}, {0.30f, 0.30f, 0.28f}), root_, skin);
+    add(primitives::cube(), box({-0.34f, 0.66f, -0.78f}, {0.15f, 0.15f, 0.80f}), root_, coat);
+    add(primitives::cube(), box({0.34f, 0.66f, -0.78f}, {0.15f, 0.15f, 0.80f}), root_, coat);
+
+    parts_.resize(pieces_.size());
+    update(0.0f);
+}
+
+void Boat::update(float time) {
+    const float angle = startAngle + time * tau / lapSeconds;
+    glm::vec3 position = moorings + glm::vec3(std::sin(angle) * drift, 0.0f,
+                                              std::cos(angle) * drift);
+    // Riding the swell: a slow lift with a little roll and pitch, none of them
+    // in step, so the motion never looks like one sine.
+    position.y += 0.10f * std::sin(time * 0.85f);
+    root_.local = glm::rotate(glm::translate(glm::mat4(1.0f), position),
+                              angle + tau * .25f, glm::vec3(0.0f, 1.0f, 0.0f));
+    root_.local = glm::rotate(root_.local, 0.035f * std::sin(time * 0.6f),
+                              glm::vec3(0.0f, 0.0f, 1.0f));
+    root_.local = glm::rotate(root_.local, 0.022f * std::sin(time * 0.73f),
+                              glm::vec3(1.0f, 0.0f, 0.0f));
+    root_.updateWorld();
+    refresh();
+}
+
+void Boat::add(Mesh mesh, const glm::mat4& offset, const SceneNode& node,
+               const glm::vec3& color) {
+    pieces_.push_back(Piece{std::move(mesh), offset, &node, color});
+}
+
+void Boat::refresh() {
+    for (std::size_t i = 0; i < pieces_.size(); ++i) {
+        const auto& piece = pieces_[i];
+        parts_[i] = Part{&piece.mesh, piece.node->world * piece.offset, piece.color, 0.0f};
+    }
+}
+
+} // namespace mla
