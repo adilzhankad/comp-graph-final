@@ -5,6 +5,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <cmath>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -17,9 +18,12 @@ const glm::vec3 trim{0.24f, 0.16f, 0.11f};
 const glm::vec3 coat{0.21f, 0.25f, 0.33f};
 const glm::vec3 skin{0.58f, 0.46f, 0.38f};
 
-// Where the boat sits on the lake, and which way it points.
-const glm::vec3 moorings{-15.0f, world::waterLevel - 0.1f, 1.0f};
-constexpr float heading = 0.7f;
+constexpr float tau = 6.28318530718f;
+// The boat rows a slow circle around this point on the lake.
+const glm::vec3 moorings{-15.0f, world::waterLevel + 0.18f, 1.0f};
+constexpr float drift = 7.0f;         // how far it wanders from there
+constexpr float lapSeconds = 210.0f;  // one slow lap
+constexpr float startAngle = 0.7f;
 
 // Cross-sections of the hull from the transom to the bow. Each one is a
 // rectangle: narrow at the keel, wider at the gunwale.
@@ -75,9 +79,6 @@ Mesh hull() {
 } // namespace
 
 Boat::Boat() {
-    root_.local = glm::rotate(glm::translate(glm::mat4(1.0f), moorings), heading,
-                              glm::vec3(0.0f, 1.0f, 0.0f));
-
     pieces_.reserve(8);
     add(hull(), glm::mat4(1.0f), root_, planks);
     // Gunwale rail along both sides, and two thwarts to sit on.
@@ -93,6 +94,22 @@ Boat::Boat() {
     add(primitives::cube(), box({0.34f, 0.66f, -0.78f}, {0.15f, 0.15f, 0.80f}), root_, coat);
 
     parts_.resize(pieces_.size());
+    update(0.0f);
+}
+
+void Boat::update(float time) {
+    const float angle = startAngle + time * tau / lapSeconds;
+    glm::vec3 position = moorings + glm::vec3(std::sin(angle) * drift, 0.0f,
+                                              std::cos(angle) * drift);
+    // Riding the swell: a slow lift with a little roll and pitch, none of them
+    // in step, so the motion never looks like one sine.
+    position.y += 0.10f * std::sin(time * 0.85f);
+    root_.local = glm::rotate(glm::translate(glm::mat4(1.0f), position),
+                              angle + tau * .25f, glm::vec3(0.0f, 1.0f, 0.0f));
+    root_.local = glm::rotate(root_.local, 0.035f * std::sin(time * 0.6f),
+                              glm::vec3(0.0f, 0.0f, 1.0f));
+    root_.local = glm::rotate(root_.local, 0.022f * std::sin(time * 0.73f),
+                              glm::vec3(1.0f, 0.0f, 0.0f));
     root_.updateWorld();
     refresh();
 }

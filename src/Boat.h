@@ -21,6 +21,9 @@ public:
     Boat(const Boat&) = delete;
     Boat& operator=(const Boat&) = delete;
 
+    // Rows on slowly and rides the swell. Time comes from the scene clock.
+    void update(float time);
+
     const std::vector<Part>& parts() const { return parts_; }
 
 private:
