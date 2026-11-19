@@ -95,7 +95,7 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 - [x] **Lake** — semi-transparent surface (alpha blending, drawn after opaque geometry) with strong Blinn-Phong specular highlights from the moon and the campfire. *Surface, transparency, ripples, fresnel and the directional highlight are implemented; the moon and campfire lights are not.*
 - [x] **Aurora** — three extended 3D curtains following cubic Bézier curves, with tall procedural rays, traveling bright pulses and additive emission; palette, brightness, speed and visibility controls.
 - [x] **Starry skybox** — night cubemap with matching horizon haze and sky reflection in the lake; locally validated in Release and Debug.
-- [x] **Campfire point light** — warm, flickering, with distance attenuation.
+- [ ]**Campfire point light** — not implemented yet.
 - [x] **Lighthouse with a turning beacon** — a tower on the shore built from solids of revolution, a lamp on a rotating scene node, a translucent cone of lit air, and a spot light that sweeps the terrain and the water. *Not in the original topic list: it was added because the scene needed a second, moving light and a parent–child object to drive it.*
 
 ### Stretch goals (each working one = 4 pts in A5, two = full 8 pts)
@@ -109,8 +109,8 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 - [x] Animated aurora colour reflected in the lake through the planar scene capture.
 - [x] Meteor shower with fading trails, shared animation pause and planar lake reflections.
 - [x] Distance fog / mountain haze, including an outer band that obscures the terrain boundary.
-- [x] Campfire spark particles.
-- [x] Dear ImGui panel with all scene parameters.
+- [ ] Campfire spark particles — not implemented yet.
+- [ ] Dear ImGui panel — not implemented; controls are listed in the Controls section and printed to the terminal with `H`.
 
 ---
 
@@ -119,11 +119,11 @@ The implemented graphics techniques include heightmap terrain with flat face nor
 | # | Requirement | Final target | Current milestone |
 |---|---|---|---|
 | R1 | Modern pipeline | OpenGL 3.3 core; VAO/VBO/EBO; separate `.vert`/`.frag` files; no fixed-function calls. | Core pipeline and reusable resource wrappers. |
-| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, campfire, pines, tent, boat and lantern. | Terrain, lake, skybox, aurora, lighthouse, plane, boat and the instanced pines are active; the remaining objects are deferred. |
-| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; **boat -> lantern** and **campfire -> logs/stones** parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. The boat and campfire groups are still to come. |
-| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; flickering campfire point light; moving lantern point light. | Two lights. The directional one lights the terrain flat and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. The visible moon, the campfire and the terrain Blinn-Phong specular implemented. |
+| R2 | Scene setup (5+ objects) | Terrain, lake, aurora, skybox, lighthouse, plane, boat, instanced pines and meteors. | Terrain, lake, skybox, aurora, lighthouse, plane, boat and the instanced pines are active. |
+| R3 | Transformation pipeline + hierarchy | GLM model/view/projection; scene-graph parent-child transforms. | Camera/model matrices, and a working **tower -> lamp -> beam** hierarchy: one matrix per frame turns the lamp, and the beam mesh, the lamp mesh and the light position all follow it. |
+| R4 | Lighting / shading | Per-fragment Blinn-Phong; movable directional moon; moving lighthouse beacon spot light. | Two lights. The directional one lights the terrain (flat shading plus a Blinn-Phong specular highlight on snow and rock) and leaves a Blinn-Phong lobe on the water; the beacon is a moving, switchable spot light with cone, distance and range falloff, per fragment on the terrain, the water and the tower. |
 | R5 | Texturing or equivalent | Terrain, logs and tent textures with UVs and mipmaps; night cubemap; procedural aurora. | Heightmap input, per-face terrain colours, procedural aurora and a mipmapped night cubemap used by the sky and the water. The `Texture` wrapper from task 02 is in the tree as well, but no pass uses it yet. Terrain/prop textures remain. |
-| R6 | Interaction | Fly camera, aurora controls, fire toggle, moon movement, time control and wireframe. | Fly camera, directional-light controls, beacon toggle and sweep speed, aurora visibility/palette/brightness/speed, meteor toggle, shared animation pause, reflection toggle, wireframe and mouse capture. The visible moon and campfire controls remain planned. |
+| R6 | Interaction | Fly camera, aurora controls, light control, time control and wireframe. | Fly camera, directional-light controls, beacon toggle and sweep speed, aurora visibility/palette/brightness/speed, meteor toggle, shared animation pause, reflection toggle, wireframe and mouse capture. |
 | R7 | Real-time performance | 60+ FPS at 1280×720; FPS counter in title, optionally ImGui. | Title counter; measured performance table still required. |
 | R8 | Build | Documented CMake build on a fresh clone, verified on Windows and macOS. | Bundled source dependencies; clean isolated-source Windows Release/Debug builds and tests passed. Fresh-clone and cross-platform validation remain. |
 
@@ -156,6 +156,7 @@ These controls apply to the current mountain-lake scene, including the aurora, m
 | `Esc` | Quit |
 
 Planned bindings for later milestones are `G` for cinematic glide, `F` for the campfire and `1`/`2`/`3` for wave presets; these have no action in the current scene. The future mouse-drag moon control still needs an unused binding. On-screen help is also deferred.
+Not implemented: cinematic glide, campfire, wave presets and an on-screen help panel.
 
 ---
 
@@ -454,7 +455,7 @@ FPS camera with yaw/pitch from the mouse, movement scaled by `deltaTime` so spee
 
 ---
 
-## Team
+
 
 ## Team
 
@@ -490,7 +491,7 @@ Measured in Release build with vsync on (display refresh 120 Hz), so FPS is capp
 
 All third-party assets (heightmaps, textures, skybox, models), shader snippets and tutorials are listed in [`CREDITS.md`](CREDITS.md) with author, link and license.
 Code adapted from LearnOpenGL or the course labs is also cited in a comment next to the code.
-
+Final:The team ran the scene and reviewed the code; AI use is disclosed in the README AI Use note.
 ---
 
 ## AI Use note
